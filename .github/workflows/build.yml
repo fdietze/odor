@@ -1,0 +1,97 @@
+name: Test
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+# automatically cancel previous runs on the same PR
+# https://stackoverflow.com/questions/66335225/how-to-cancel-previous-runs-in-the-pr-when-you-push-new-commitsupdate-the-curre/67939898#67939898
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        scalaVersion: ["2.13.8", "3.1.3"]
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: coursier/cache-action@v6
+      - uses: olafurpg/setup-scala@v13
+        with:
+          java-version: openjdk@1.17
+
+      # https://github.com/actions/cache/blob/master/examples.md#node---yarn
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v3
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+
+      - uses: actions/cache@v3
+        name: Cache scalajs-bundler node_modules
+        with:
+          path: "*/target/**/main/node_modules"
+          key: ${{ runner.os }}-scalajsbundler-node_modules-${{ hashFiles('*/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-scalajsbundler-node_modules
+
+
+      - name: Compile
+        run: |
+          # Runner has 7G of RAM, so 4G for sbt is ok here:
+          # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
+          ENABLE_FATAL_WARNINGS=true sbt --mem 4096 ++${{matrix.scalaVersion}} compile demo/fastOptJS/webpack scalafmtCheck scalafmtSbtCheck
+
+      - name: Prepare devserver to run End-to-End UI Tests
+        if: startsWith(matrix.scalaVersion, '3.')
+        run: |
+          # Start frontend dev-webserver
+          (
+            cd demo/target/scala-${{matrix.scalaVersion}}/scalajs-bundler/main || kill 0
+            node node_modules/.bin/webpack-dev-server --bail --port 12345 --config  webpack.config.dev.js || kill 0
+          ) &
+
+      - name: Prepare devserver to run End-to-End UI Tests
+        if: startsWith(matrix.scalaVersion, '2.13.')
+        run: |
+          # Start frontend dev-webserver
+          (
+            cd demo/target/scala-2.13/scalajs-bundler/main || kill 0
+            node node_modules/webpack-dev-server/bin/webpack-dev-server.js --config webpack.config.dev.js --port 12345 || kill 0
+          ) &
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v4.2.0
+
+      - name: Build production assets
+        if: github.ref == 'refs/heads/main' && startsWith(matrix.scalaVersion, '2.13')
+        run: |
+          sbt prod
+
+      - name: Check if working directory is clean
+        run: git diff --quiet --exit-code || (git status && false)
+
+      - name: Deploy to Github Pages
+        if: github.ref == 'refs/heads/main' && startsWith(matrix.scalaVersion, '2.13')
+        uses: JamesIves/github-pages-deploy-action@v4.4.0
+        with:
+          branch: gh-pages # The branch the action should deploy to.
+          folder: demo/target/scala-2.13/scalajs-bundler/main/dist # The folder the action should deploy.
+
+      # - name: Debug over SSH (tmate)
+      #   # if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
+      #   with:
+      #     limit-access-to-actor: true
