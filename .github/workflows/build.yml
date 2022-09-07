@@ -48,7 +48,7 @@ jobs:
           key: ${{ runner.os }}-scalablytyped-${{ hashfiles('build.sbt') }}-${{ hashFiles('*/yarn.lock') }}
 
 
-      - name: Compile
+      - name: Compile & Test
         run: |
           # Runner has 7G of RAM, so 5G for sbt is ok here:
           # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
