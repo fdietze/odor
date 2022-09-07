@@ -69,7 +69,7 @@ lazy val odor = project
   .enablePlugins(
     ScalaJSPlugin,
     ScalaJSBundlerPlugin,
-    ScalablyTypedConverterPlugin,
+    ScalablyTypedConverterGenSourcePlugin, // because it's a library: https://scalablytyped.org/docs/library-developer#add-to-your-projectpluginssbt
   )
   .settings(commonSettings)
   .settings(
@@ -81,5 +81,6 @@ lazy val odor = project
     stIgnore ++= List(
       "pg-connection",
     ),
+    stOutputPackage := "odor.facades",
     useYarn := true, // Makes scalajs-bundler use yarn instead of npm
   )

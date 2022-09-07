@@ -7,9 +7,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 import scala.annotation.nowarn
-import typings.pg.mod.ClientConfig
-import typings.pg.mod.QueryArrayConfig
-import typings.pg.mod.{Client => PgClient}
+import facades.pg.mod.ClientConfig
+import facades.pg.mod.QueryArrayConfig
+import facades.pg.mod.{Client => PgClient}
 import cats.effect.std.Semaphore
 import cats.effect.IO
 import cats.implicits._
