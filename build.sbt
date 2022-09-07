@@ -1,6 +1,6 @@
 name                           := "Odor"
 ThisBuild / organization       := "com.github.fdietze"
-ThisBuild / crossScalaVersions := Seq("2.13.8", "3.1.3")
+ThisBuild / crossScalaVersions := Seq("2.13.8")
 ThisBuild / scalaVersion       := "2.13.8"
 
 val versions = new {
@@ -32,22 +32,38 @@ lazy val commonSettings = Seq(
   // overwrite scalacOptions "-Xfatal-warnings" from https://github.com/DavidGregory084/sbt-tpolecat
   scalacOptions --= (if (enableFatalWarnings) Nil else Seq("-Xfatal-warnings")),
   scalacOptions ++= (if (isScala3.value) Nil
-                     else Seq("-Vimplicits", "-Vtype-diffs")), // better error messages for implicit resolution
+                     else
+                       Seq(
+                         "-Vimplicits",
+                         "-Vtype-diffs",
+                         "-Xasync",
+                         "-Ymacro-annotations",
+                         "-Xcheckinit",
+                       )), // better error messages for implicit resolution
   scalacOptions ++= (if (isScala3.value) Seq("-Yretain-trees") else Nil), // recursive data structures with Scala 3
   scalacOptions ++= (if (isScala3.value) Seq("-scalajs") else Nil),       // needed for Scala3 + ScalaJS
+
+  libraryDependencies ++= Seq(
+    "org.scala-lang.modules" %%% "scala-async" % "1.0.1",
+    "org.scalatest"          %%% "scalatest"   % versions.scalaTest % Test,
+  ),
 )
 
 lazy val odor = project
   .enablePlugins(
     ScalaJSPlugin,
     ScalaJSBundlerPlugin,
+    ScalablyTypedConverterPlugin,
   )
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.fdietze.skunk" %%% "skunk-core"  % "3826f7f",
+      "com.github.fdietze.skunk" %%% "skunk-core" % "3826f7f",
     ),
     Compile / npmDependencies    ++= readJsDependencies(baseDirectory.value, "dependencies"),
     Compile / npmDevDependencies ++= readJsDependencies(baseDirectory.value, "devDependencies"),
-    useYarn                       := true,// Makes scalajs-bundler use yarn instead of npm
+    stIgnore ++= List(
+      "pg-connection",
+    ),
+    useYarn := true, // Makes scalajs-bundler use yarn instead of npm
   )
