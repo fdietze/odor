@@ -82,5 +82,5 @@ lazy val odor = project
       "pg-connection",
     ),
     stOutputPackage := "odor.facades",
-    useYarn := true, // Makes scalajs-bundler use yarn instead of npm
+    useYarn         := true,// Makes scalajs-bundler use yarn instead of npm
   )
