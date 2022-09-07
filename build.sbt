@@ -3,6 +3,22 @@ ThisBuild / organization       := "com.github.fdietze"
 ThisBuild / crossScalaVersions := Seq("2.13.8")
 ThisBuild / scalaVersion       := "2.13.8"
 
+inThisBuild(
+  List(
+    organization := "com.github.fdietze",
+    homepage     := Some(url("https://github.com/fdietze/odor")),
+    licenses     := Seq("MIT License" -> url("https://opensource.org/licenses/MIT")),
+    developers := List(
+      Developer(
+        "fdietze",
+        "Felix Dietze",
+        "mail@felx.me",
+        url("https://github.com/fdietze"),
+      ),
+    ),
+  ),
+)
+
 val versions = new {
   val scalaTest = "3.2.12"
 }
