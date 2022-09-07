@@ -3,11 +3,11 @@
 
 ```scala
 ThisBuild / resolvers ++= Seq(
-  "Jitpack" at "https://jitpack.io",
+  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
 )
 
 
 libraryDependencies ++= Seq(
-  "com.github.fdietze.odor"  %%% "odor"          % "<git-hash>",
+  "com.github.fdietze"  %%% "odor"          % "0.0.0+12-bbe99f96-SNAPSHOT",
 )
 ```
