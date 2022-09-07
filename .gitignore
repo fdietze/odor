@@ -46,3 +46,4 @@ bin/
 /node_modules
 cypress/screenshots
 cypress/videos
+odor/yarn.lock
