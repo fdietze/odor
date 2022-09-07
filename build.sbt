@@ -47,6 +47,7 @@ val isScala3 = Def.setting(CrossVersion.partialVersion(scalaVersion.value).exist
 lazy val commonSettings = Seq(
   // overwrite scalacOptions "-Xfatal-warnings" from https://github.com/DavidGregory084/sbt-tpolecat
   scalacOptions --= (if (enableFatalWarnings) Nil else Seq("-Xfatal-warnings")),
+  scalacOptions += "-Wconf:src=src_managed/.*:s", // silence warnings for generated sources
   scalacOptions ++= (if (isScala3.value) Nil
                      else
                        Seq(

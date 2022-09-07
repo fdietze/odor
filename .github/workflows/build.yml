@@ -52,7 +52,7 @@ jobs:
         run: |
           # Runner has 7G of RAM, so 5G for sbt is ok here:
           # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
-          ENABLE_FATAL_WARNINGS=false sbt --mem 5000 ++${{matrix.scalaVersion}} compile test scalafmtCheck scalafmtSbtCheck
+          ENABLE_FATAL_WARNINGS=true sbt --mem 5000 ++${{matrix.scalaVersion}} compile test scalafmtCheck scalafmtSbtCheck
 
       - name: Check if working directory is clean
         run: git diff --quiet --exit-code || (git status && false)
