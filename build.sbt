@@ -83,5 +83,12 @@ lazy val odor = project
       "pg-connection",
     ),
     stOutputPackage := "odor.facades",
-    useYarn         := true,// Makes scalajs-bundler use yarn instead of npm
+    stMinimize      := Selection.All,
+    /* but keep these very specific things*/
+    stMinimizeKeep ++= List(
+      "pg.mod.ClientConfig",
+      "pg.mod.QueryArrayConfig",
+      "pg.mod.Client",
+    ),
+    useYarn := true, // Makes scalajs-bundler use yarn instead of npm
   )
