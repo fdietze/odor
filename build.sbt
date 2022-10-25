@@ -61,6 +61,7 @@ lazy val commonSettings = Seq(
   scalacOptions ++= (if (isScala3.value) Seq("-scalajs") else Nil),       // needed for Scala3 + ScalaJS
 
   libraryDependencies ++= Seq(
+//    if (isScala3.value) "com.github.rssh" %% "shim-scala-async-dotty-cps-async" % "0.9.11"
     "org.scala-lang.modules" %%% "scala-async" % "1.0.1",
     "org.scalatest"          %%% "scalatest"   % versions.scalaTest % Test,
   ),
@@ -75,7 +76,7 @@ lazy val odor = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.fdietze.skunk" %%% "skunk-core" % "3826f7f",
+      "com.github.fdietze.skunk" %%% "skunk-core" % "bfe5d0bb65", // https://github.com/tpolecat/skunk/pull/684
     ),
     Compile / npmDependencies    ++= readJsDependencies(baseDirectory.value, "dependencies"),
     Compile / npmDevDependencies ++= readJsDependencies(baseDirectory.value, "devDependencies"),

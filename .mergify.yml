@@ -3,7 +3,6 @@ queue_rules:
     conditions:
       # Conditions to get out of the queue (= merged)
       - check-success~=build \(2.13.\d+\)
-      - check-success~=build \(3.1.\d+\)
 
 pull_request_rules:
   - name: Label Scala Steward PRs
@@ -18,7 +17,6 @@ pull_request_rules:
       - base=main
       - label=dependencies
       - check-success~=build \(2.13.\d+\)
-      - check-success~=build \(3.1.\d+\)
     actions:
       queue:
         name: default
@@ -30,7 +28,6 @@ pull_request_rules:
       - label=ready-to-merge-rebase
       - base=main
       - check-success~=build \(2.13.\d+\)
-      - check-success~=build \(3.1.\d+\)
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
     actions:
@@ -44,7 +41,6 @@ pull_request_rules:
       - label=ready-to-merge-squash
       - base=main
       - check-success~=build \(2.13.\d+\)
-      - check-success~=build \(3.1.\d+\)
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
     actions:
