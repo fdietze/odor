@@ -20,7 +20,7 @@ inThisBuild(
 )
 
 val versions = new {
-  val scalaTest = "3.2.12"
+  val scalaTest = "3.2.14"
 }
 
 ThisBuild / resolvers ++= Seq(
