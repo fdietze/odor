@@ -69,6 +69,11 @@ class PostgresClient(connectionString: String)(implicit ec: ExecutionContext) {
         row.view
           .map(any =>
             Option(any: Any).map {
+              // pg-node automatically parses types
+              // https://node-postgres.com/features/types
+              // But we don't want that, since skunk has its own decoders,
+              // which work with strings
+              //
               // TODO: tests for these data types
               case bool: Boolean => if (bool) "t" else "f"
               case date: js.Date =>
@@ -77,7 +82,8 @@ class PostgresClient(connectionString: String)(implicit ec: ExecutionContext) {
                 // `Date` object in the database. This overhead gets cut away by
                 // calling `substring`.
                 date.toISOString().substring(0, 10)
-              case other => other.toString
+              case jsObject: js.Object => js.JSON.stringify(jsObject)
+              case other               => other.toString
             },
           )
           .toList,
