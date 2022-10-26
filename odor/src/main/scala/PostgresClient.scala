@@ -6,7 +6,6 @@ import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-import scala.annotation.nowarn
 import facades.pg.mod.ClientConfig
 import facades.pg.mod.QueryArrayConfig
 import facades.pg.mod.{Client => PgClient}
