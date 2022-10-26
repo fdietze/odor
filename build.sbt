@@ -23,12 +23,6 @@ val versions = new {
   val scalaTest = "3.2.14"
 }
 
-ThisBuild / resolvers ++= Seq(
-  "jitpack" at "https://jitpack.io",
-  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-  "Sonatype OSS Snapshots S01" at "https://s01.oss.sonatype.org/content/repositories/snapshots", // https://central.sonatype.org/news/20210223_new-users-on-s01/
-)
-
 lazy val scalaJsMacrotaskExecutor = Seq(
   // https://github.com/scala-js/scala-js-macrotask-executor
   libraryDependencies += "org.scala-js" %%% "scala-js-macrotask-executor" % "1.1.0",
@@ -76,7 +70,7 @@ lazy val odor = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.fdietze.skunk" %%% "skunk-core" % "bfe5d0bb65", // https://github.com/tpolecat/skunk/pull/684
+      "org.tpolecat" %%% "skunk-core" % "0.3.2",
     ),
     Compile / npmDependencies    ++= readJsDependencies(baseDirectory.value, "dependencies"),
     Compile / npmDevDependencies ++= readJsDependencies(baseDirectory.value, "devDependencies"),
