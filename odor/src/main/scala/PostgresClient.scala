@@ -21,7 +21,6 @@ import skunk.implicits._
 
 @js.native
 @JSImport("pg-connection-string", JSImport.Namespace)
-@nowarn("msg=never used")
 object PgConnectionString extends js.Object {
   def parse(arg: String): ClientConfig = js.native
 }
