@@ -1,35 +1,40 @@
 package odor
 
+import cats.effect.IO
+import cats.effect.std.Semaphore
+import cats.effect.unsafe.implicits.{global => unsafeIORuntimeGlobal}
+import cats.implicits._
+import odor.facades.pg.mod.{Client => PgClient, PoolClient, QueryArrayConfig}
+import odor.facades.pgPool.mod.{^ => PgPool, Config => PgPoolConfig}
 import skunk._
+import skunk.implicits._
 
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSImport
-import scala.annotation.nowarn
-import facades.pg.mod.ClientConfig
-import facades.pg.mod.QueryArrayConfig
-import facades.pg.mod.{Client => PgClient}
-import cats.effect.std.Semaphore
-import cats.effect.IO
-import cats.implicits._
-import cats.effect.unsafe.implicits.{global => unsafeIORuntimeGlobal}
-
 import scala.scalajs.js.JSConverters._
 import scala.util.{Failure, Success}
-import skunk.implicits._
 
-@js.native
-@JSImport("pg-connection-string", JSImport.Namespace)
-@nowarn("msg=never used")
-object PgConnectionString extends js.Object {
-  def parse(arg: String): ClientConfig = js.native
+class PostgresConnectionPool(connectionString: String, maxClients: Int)(implicit ec: ExecutionContext) {
+  // https://node-postgres.com/api/pool
+  private val poolConfig = PgPoolConfig[PgClient]()
+    .setConnectionString(connectionString)
+    .setMax(maxClients.toDouble)
+
+  private val pool = new PgPool(poolConfig)
+
+  def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
+
+  def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
+    val poolClient = await(acquireConnection())
+    val pgClient   = new PostgresClient(poolClient)
+    val result     = await(code(pgClient))
+    poolClient.release()
+    result
+  }
 }
 
-class PostgresClient(connectionString: String)(implicit ec: ExecutionContext) {
-
-  private val client: PgClient              = new PgClient(PgConnectionString.parse(connectionString))
-  private lazy val connection: Future[Unit] = client.connect().toFuture
+class PostgresClient(connection: PoolClient)(implicit ec: ExecutionContext) {
 
   val transactionSemaphore: Future[Semaphore[IO]] = Semaphore[IO](1).unsafeToFuture()
 
@@ -37,9 +42,8 @@ class PostgresClient(connectionString: String)(implicit ec: ExecutionContext) {
     command: Command[PARAMS],
     params: PARAMS = Void,
   ): Future[Unit] = async {
-    await(connection)
     await(
-      client
+      connection
         .query(
           command.sql,
           command.encoder.encode(params).map(_.orNull).toJSArray,
@@ -53,10 +57,8 @@ class PostgresClient(connectionString: String)(implicit ec: ExecutionContext) {
     query: Query[PARAMS, ROW],
     params: PARAMS = Void,
   ): Future[Vector[ROW]] = async {
-
-    await(connection) // wait until connection is ready
     val result = await(
-      client
+      connection
         .query[js.Array[js.Any], js.Array[js.Any]](
           QueryArrayConfig[js.Array[js.Any]](query.sql),
           query.encoder.encode(params).map(_.orNull.asInstanceOf[js.Any]).toJSArray,
@@ -100,13 +102,12 @@ class PostgresClient(connectionString: String)(implicit ec: ExecutionContext) {
     rows.head
   }
 
-  def newTransaction() = new PostgresClient.Transaction(connection, transactionSemaphore, command[Void](_))
+  val tx = new PostgresClient.Transaction(transactionSemaphore, command[Void](_))
 
 }
 
 object PostgresClient {
   class Transaction(
-    connection: Future[Unit],
     transactionSemaphore: Future[Semaphore[IO]],
     command: Command[Void] => Future[Unit],
   )(implicit ec: ExecutionContext) {
@@ -114,7 +115,6 @@ object PostgresClient {
     private var recursion = 0
 
     def apply[T](code: => Future[T]): Future[T] = async {
-      await(connection) // wait until connection is ready
       val semaphore = await(transactionSemaphore)
 
       if (recursion == 0) {

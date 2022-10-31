@@ -81,9 +81,11 @@ lazy val odor = project
     stMinimize      := Selection.All,
     /* but keep these very specific things*/
     stMinimizeKeep ++= List(
-      "pg.mod.ClientConfig",
-      "pg.mod.QueryArrayConfig",
       "pg.mod.Client",
+      "pg.mod.PoolClient",
+      "pg.mod.QueryArrayConfig",
+      "pgPool.mod.^",
+      "pgPool.mod.Config",
     ),
     useYarn := true, // Makes scalajs-bundler use yarn instead of npm
   )
