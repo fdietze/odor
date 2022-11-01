@@ -27,10 +27,14 @@ class PostgresConnectionPool(connectionString: String, maxClients: Int)(implicit
 
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
     val poolClient = await(acquireConnection())
+    poolClient.on("error", (err: Any) => println(s"Postgres connection error: $err"))
     val pgClient   = new PostgresClient(poolClient)
-    val result     = await(code(pgClient))
+    val codeResult = await(code(pgClient).attempt)
     poolClient.release()
-    result
+    codeResult match {
+      case Left(err)  => throw err
+      case Right(res) => res
+    }
   }
 }
 
