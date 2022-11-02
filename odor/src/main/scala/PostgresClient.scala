@@ -6,7 +6,6 @@ import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-import scala.annotation.nowarn
 import facades.pg.mod.ClientConfig
 import facades.pg.mod.QueryArrayConfig
 import facades.pg.mod.{Client => PgClient}
@@ -21,7 +20,6 @@ import skunk.implicits._
 
 @js.native
 @JSImport("pg-connection-string", JSImport.Namespace)
-@nowarn("msg=never used")
 object PgConnectionString extends js.Object {
   def parse(arg: String): ClientConfig = js.native
 }

@@ -1,7 +1,7 @@
 name                           := "Odor"
 ThisBuild / organization       := "com.github.fdietze"
-ThisBuild / crossScalaVersions := Seq("2.13.8")
-ThisBuild / scalaVersion       := "2.13.8"
+ThisBuild / crossScalaVersions := Seq("2.13.10")
+ThisBuild / scalaVersion       := "2.13.10"
 
 inThisBuild(
   List(
