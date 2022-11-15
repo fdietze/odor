@@ -28,18 +28,10 @@ jobs:
           jvm: adoptium:1.17
           apps: sbt metals
 
-      # https://github.com/actions/cache/blob/master/examples.md#node---yarn
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - name: Cache yarn
-        uses: actions/cache@v3
-        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+      - uses: actions/setup-node@v3
         with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-
+          node-version: '16'
+          cache: 'yarn'
 
       - name: Cache Scalablytyped transpilations
         uses: actions/cache@v3
@@ -52,9 +44,12 @@ jobs:
 
       - name: Compile & Test
         run: |
-          # Runner has 7G of RAM, so 5G for sbt is ok here:
+          # Runner has 7G of RAM.
           # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
-          ENABLE_FATAL_WARNINGS=true sbt --mem 5000 ++${{matrix.scalaVersion}} compile test scalafmtCheck scalafmtSbtCheck
+          ENABLE_FATAL_WARNINGS=true SBT_OPTS="-XX:MaxHeapSize=6G" sbt \
+            ++${{matrix.scalaVersion}} \
+            compile test \
+            scalafmtCheck scalafmtSbtCheck
 
       - name: Check if working directory is clean
         run: git diff --quiet --exit-code || (git status && false)
@@ -91,18 +86,10 @@ jobs:
           jvm: adoptium:1.17
           apps: sbt
 
-      # https://github.com/actions/cache/blob/main/examples.md#node---yarn
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - name: Cache yarn
-        uses: actions/cache@v3
-        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+      - uses: actions/setup-node@v3
         with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-
+          node-version: '16'
+          cache: 'yarn'
 
       - name: Cache Scalablytyped transpilations
         uses: actions/cache@v3
@@ -114,7 +101,7 @@ jobs:
 
       - uses: olafurpg/setup-gpg@v3
       - name: Publish
-        run: ENABLE_FATAL_WARNINGS=true sbt version "git status" ci-release "git status"
+        run: ENABLE_FATAL_WARNINGS=true SBT_OPTS="-XX:MaxHeapSize=6G" sbt version "git status" ci-release "git status"
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
