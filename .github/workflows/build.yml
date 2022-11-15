@@ -32,6 +32,7 @@ jobs:
         with:
           node-version: '16'
           cache: 'yarn'
+          cache-dependency-path: odor/package.json
 
       - name: Cache Scalablytyped transpilations
         uses: actions/cache@v3
@@ -39,7 +40,7 @@ jobs:
           path: |
             ~/.ivy2/local/org.scalablytyped
             ~/.cache/scalablytyped
-          key: ${{ runner.os }}-scalablytyped-${{ hashfiles('build.sbt') }}-${{ hashFiles('*/yarn.lock') }}
+          key: ${{ runner.os }}-scalablytyped-${{ hashFiles('*/package.json') }}
 
 
       - name: Compile & Test
