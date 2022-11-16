@@ -13,9 +13,42 @@ import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSImport
 import scala.util.{Failure, Success}
+import scala.annotation.nowarn
+
+@nowarn("msg=never used")
+@nowarn("msg=dead code")
+@js.native
+@JSImport("pg-types", JSImport.Namespace)
+object PgTypes extends js.Object {
+  def setTypeParser(oid: Int, format: String, parseFn: js.Function1[String, js.Any]): Unit = js.native
+  var getTypeParser: js.Function2[Int, String, js.Function1[String, js.Any]]               = js.native
+}
+
+object DisableAutomaticTypeParsing {
+  // pg-node has automatic type coercion:
+  // https://node-postgres.com/features/types
+  // It means, that it parses the raw types it gets from postgres into corresponding javascript types.
+  // But with Skunk as a frontend, we already have these mechanics.
+  //
+  // Here, we're replacing all parsers with the identity function, so that we can pass on the raw data from postgres to Skunk.
+
+  // list of all implemented parsers in pg-node:
+  // https://github.com/brianc/node-pg-types/blob/8594bc6befca3523e265022f303f1376f679b5dc/lib/textParsers.js
+
+  // Official way to overwrite a single parser:
+  // https://github.com/brianc/node-postgres/blob/master/packages/pg/test/integration/client/huge-numeric-tests.js
+  // PgTypes.setTypeParser(16, "text", x => x) // 16 = OID of BOOL
+
+  // Internally, pg-node requests a type-parser for every returned type (oid) of a result set.
+  // By letting it always return the identity function, we're overwriting all parsers at once:
+  PgTypes.getTypeParser = { (_, _) => raw => raw }
+}
 
 class PostgresConnectionPool(connectionString: String, maxClients: Int)(implicit ec: ExecutionContext) {
+  DisableAutomaticTypeParsing
+
   // https://node-postgres.com/api/pool
   private val poolConfig = PgPoolConfig[PgClient]()
     .setConnectionString(connectionString)
@@ -72,27 +105,11 @@ class PostgresClient(connection: PoolClient)(implicit ec: ExecutionContext) {
     result.rows.view.map { row =>
       query.decoder.decode(
         0,
-        row.view
-          .map(any =>
-            Option(any: Any).map {
-              // pg-node automatically parses types
-              // https://node-postgres.com/features/types
-              // But we don't want that, since skunk has its own decoders,
-              // which work with strings
-              //
-              // TODO: tests for these data types
-              case bool: Boolean => if (bool) "t" else "f"
-              case date: js.Date =>
-                // toString on js.Date localizes the date. `toISOString`
-                // also adds time information that doesn't exist in the original
-                // `Date` object in the database. This overhead gets cut away by
-                // calling `substring`.
-                date.toISOString().substring(0, 10)
-              case jsObject: js.Object => js.JSON.stringify(jsObject)
-              case other               => other.toString
-            },
-          )
-          .toList,
+        row.view.map { any =>
+          // The facade has an any type, because pg-node officially decodes values to native javascript types.
+          // We have this feature disabled and assume it's a String.
+          Option(any.asInstanceOf[String])
+        }.toList,
       ) match {
         case Left(err)         => throw new Exception(err.message)
         case Right(decodedRow) => decodedRow
