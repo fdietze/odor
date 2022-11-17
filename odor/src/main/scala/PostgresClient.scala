@@ -61,7 +61,7 @@ class PostgresConnectionPool(connectionString: String, maxClients: Int)(implicit
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
     val poolClient = await(acquireConnection())
     poolClient.on("error", (err: Any) => println(s"Postgres connection error: $err"))
-    val pgClient   = new PostgresClient(poolClient)
+    val pgClient   = new PostgresClient(this, poolClient)
     val codeResult = await(code(pgClient).attempt)
     poolClient.release()
     codeResult match {
@@ -71,7 +71,7 @@ class PostgresConnectionPool(connectionString: String, maxClients: Int)(implicit
   }
 }
 
-class PostgresClient(connection: PoolClient)(implicit ec: ExecutionContext) {
+class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(implicit ec: ExecutionContext) {
 
   val transactionSemaphore: Future[Semaphore[IO]] = Semaphore[IO](1).unsafeToFuture()
 
