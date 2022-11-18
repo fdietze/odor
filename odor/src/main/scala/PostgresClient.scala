@@ -46,13 +46,13 @@ object DisableAutomaticTypeParsing {
   PgTypes.getTypeParser = { (_, _) => raw => raw }
 }
 
-class PostgresConnectionPool(connectionString: String, maxClients: Int)(implicit ec: ExecutionContext) {
+class PostgresConnectionPool(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext) {
   DisableAutomaticTypeParsing
 
   // https://node-postgres.com/api/pool
   private val poolConfig = PgPoolConfig[PgClient]()
     .setConnectionString(connectionString)
-    .setMax(maxClients.toDouble)
+    .setMax(maxConnections.toDouble)
 
   private val pool = new PgPool(poolConfig)
 
