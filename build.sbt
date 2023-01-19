@@ -70,7 +70,7 @@ lazy val odor = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.tpolecat" %%% "skunk-core" % "0.3.2",
+      "org.tpolecat" %%% "skunk-core" % "0.5.0",
     ),
     Compile / npmDependencies    ++= readJsDependencies(baseDirectory.value, "dependencies"),
     Compile / npmDevDependencies ++= readJsDependencies(baseDirectory.value, "devDependencies"),
