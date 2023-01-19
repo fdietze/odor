@@ -99,7 +99,7 @@ jobs:
           path: |
             ~/.ivy2/local/org.scalablytyped
             ~/.cache/scalablytyped
-          key: ${{ runner.os }}-scalablytyped-${{ hashfiles('build.sbt') }}-${{ hashFiles('*/yarn.lock') }}
+          key: ${{ runner.os }}-scalablytyped-${{ hashFiles('*/package.json') }}
 
       - uses: olafurpg/setup-gpg@v3
       - name: Publish
