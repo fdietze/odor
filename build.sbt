@@ -20,14 +20,8 @@ inThisBuild(
 )
 
 val versions = new {
-  val scalaTest = "3.2.12"
+  val scalaTest = "3.2.15"
 }
-
-ThisBuild / resolvers ++= Seq(
-  "jitpack" at "https://jitpack.io",
-  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-  "Sonatype OSS Snapshots S01" at "https://s01.oss.sonatype.org/content/repositories/snapshots", // https://central.sonatype.org/news/20210223_new-users-on-s01/
-)
 
 lazy val scalaJsMacrotaskExecutor = Seq(
   // https://github.com/scala-js/scala-js-macrotask-executor
@@ -76,7 +70,7 @@ lazy val odor = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.fdietze.skunk" %%% "skunk-core" % "bfe5d0bb65", // https://github.com/tpolecat/skunk/pull/684
+      "org.tpolecat" %%% "skunk-core" % "0.5.1",
     ),
     Compile / npmDependencies    ++= readJsDependencies(baseDirectory.value, "dependencies"),
     Compile / npmDevDependencies ++= readJsDependencies(baseDirectory.value, "devDependencies"),
@@ -87,9 +81,11 @@ lazy val odor = project
     stMinimize      := Selection.All,
     /* but keep these very specific things*/
     stMinimizeKeep ++= List(
-      "pg.mod.ClientConfig",
-      "pg.mod.QueryArrayConfig",
       "pg.mod.Client",
+      "pg.mod.PoolClient",
+      "pg.mod.QueryArrayConfig",
+      "pgPool.mod.^",
+      "pgPool.mod.Config",
     ),
     useYarn := true, // Makes scalajs-bundler use yarn instead of npm
   )
