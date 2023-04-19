@@ -46,7 +46,7 @@ object DisableAutomaticTypeParsing {
 }
 
 class PostgresConnectionPool(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext) {
-  DisableAutomaticTypeParsing
+  DisableAutomaticTypeParsing: Unit
 
   // https://node-postgres.com/api/pool
   private val poolConfig = PgPoolConfig[PgClient]()
@@ -57,6 +57,7 @@ class PostgresConnectionPool(connectionString: String, maxConnections: Int)(impl
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
 
+  @nowarn("msg=unused value")
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
     val poolClient = await(acquireConnection())
     poolClient.on("error", (err: Any) => println(s"Postgres connection error: $err"))
@@ -70,6 +71,7 @@ class PostgresConnectionPool(connectionString: String, maxConnections: Int)(impl
   }
 }
 
+@nowarn("msg=unused value")
 class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(implicit ec: ExecutionContext) {
 
   val transactionSemaphore: Future[Semaphore[IO]] = Semaphore[IO](1).unsafeToFuture()
@@ -89,6 +91,7 @@ class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(i
     ()
   }
 
+  @nowarn("msg=unused value")
   def query[PARAMS, ROW](
     query: Query[PARAMS, ROW],
     params: PARAMS = Void,
@@ -126,6 +129,7 @@ class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(i
 
 }
 
+@nowarn("msg=unused value")
 object PostgresClient {
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
