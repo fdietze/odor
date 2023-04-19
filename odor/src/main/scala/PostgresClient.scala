@@ -46,27 +46,38 @@ object DisableAutomaticTypeParsing {
   PgTypes.getTypeParser = { (_, _) => raw => raw }
 }
 
-class PostgresConnectionPool(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext) {
+class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient])(implicit
+  ec: ExecutionContext,
+) {
   DisableAutomaticTypeParsing
-
-  // https://node-postgres.com/api/pool
-  private val poolConfig = PgPoolConfig[PgClient]()
-    .setConnectionString(connectionString)
-    .setMax(maxConnections.toDouble)
 
   private val pool = new PgPool(poolConfig)
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
 
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
-    val pgClient   = new PostgresClient(this)
+    val pgClient = new PostgresClient(this)
+
     val codeResult = await(code(pgClient).attempt)
-    pgClient.release()
+
+    await(pgClient.release())
+
     codeResult match {
       case Left(err)  => throw err
       case Right(res) => res
     }
   }
+
+  def end(): Future[Unit] = pool.end().toFuture
+}
+object PostgresConnectionPool {
+  def apply(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext): PostgresConnectionPool =
+    new PostgresConnectionPool(
+      PgPoolConfig[PgClient]()
+        .setConnectionString(connectionString)
+        .setMax(maxConnections.toDouble),
+    )
+  // https://node-postgres.com/api/pool
 }
 
 class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionContext) {
@@ -84,9 +95,11 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
     }
   }
 
-  def release(): Unit = if (!pgClientIsReleased) {
-    pgClientIsReleased = true
-    if (pgClientIsInitialized) connection.foreach(_.release())
+  def release(): Future[Unit] = async {
+    if (!pgClientIsReleased) {
+      pgClientIsReleased = true
+      if (pgClientIsInitialized) await(connection).release()
+    }
   }
 
   val transactionSemaphore: Future[Semaphore[IO]] = Semaphore[IO](1).unsafeToFuture()
