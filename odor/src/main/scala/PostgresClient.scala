@@ -78,8 +78,8 @@ class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(i
   def command[PARAMS](
     command: Command[PARAMS],
     params: PARAMS = Void,
-  ): Future[Unit] = async {
-    await(
+  ): Future[Int] = async {
+    val result = await(
       connection
         .query(
           command.sql,
@@ -87,7 +87,7 @@ class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(i
         )
         .toFuture,
     )
-    ()
+    result.rowCount.toInt
   }
 
   def query[PARAMS, ROW](
@@ -130,7 +130,7 @@ class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(i
 object PostgresClient {
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
-    command: Command[Void] => Future[Unit],
+    command: Command[Void] => Future[Int],
   )(implicit ec: ExecutionContext) {
 
     private var recursion = 0
