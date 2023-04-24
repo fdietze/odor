@@ -24,7 +24,7 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
 
   val tx = new PostgresClient.Transaction(
     transactionSemaphore = semaphore,
-    command = c => Future.successful(buffer += c.sql),
+    command = c => Future.successful { buffer += c.sql; 0 },
   )
 
   def delay(delayMs: Long): Future[Unit] = {
@@ -162,7 +162,7 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
     while (i < 2) {
       val tx = new PostgresClient.Transaction(
         transactionSemaphore = semaphore,
-        command = c => if (c.sql == failedSql(i)) Future.failed(connFail) else Future.successful(buffer += c.sql),
+        command = c => if (c.sql == failedSql(i)) Future.failed(connFail) else Future.successful { buffer += c.sql; 0 },
       )
 
       assert(await(tx {
@@ -191,7 +191,7 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
 
     val tx = new PostgresClient.Transaction(
       transactionSemaphore = semaphore,
-      command = c => if (c.sql == "ROLLBACK") Future.failed(connFail) else Future.successful(buffer += c.sql),
+      command = c => if (c.sql == "ROLLBACK") Future.failed(connFail) else Future.successful { buffer += c.sql; 0 },
     )
 
     assert(await(tx {
@@ -206,5 +206,4 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
     assert(await(await(semaphore).available.unsafeToFuture()) == 1)
 
   }
-
 }
