@@ -85,22 +85,23 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
   private var pgClientIsInitialized = false
   private var pgClientIsReleased    = false
 
-  private lazy val connection: Future[PoolClient] = async {
-    if (pgClientIsReleased) throw new IllegalStateException("PostgresClient already released")
+  private lazy val connection: Future[PoolClient] = {
+    if (pgClientIsReleased) Future.failed(new IllegalStateException("PostgresClient already released"))
     else {
       pgClientIsInitialized = true
-      val poolClient = await(pool.acquireConnection())
-      poolClient.on("error", (err: Any) => println(s"Postgres connection error: $err"))
-      poolClient
+      async {
+        val poolClient = await(pool.acquireConnection())
+        poolClient.on("error", (err: Any) => println(s"Postgres connection error: $err"))
+        poolClient
+      }
     }
   }
 
-  def release(): Future[Unit] = async {
-    if (!pgClientIsReleased) {
-      pgClientIsReleased = true
-      if (pgClientIsInitialized) await(connection).release()
-    }
-  }
+  def release(): Future[Unit] = if (!pgClientIsReleased) {
+    pgClientIsReleased = true
+    if (pgClientIsInitialized) connection.map(_.release())
+    else Future.successful(())
+  } else Future.successful(())
 
   val transactionSemaphore: Future[Semaphore[IO]] = Semaphore[IO](1).unsafeToFuture()
 
