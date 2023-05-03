@@ -15,6 +15,7 @@ import scala.scalajs.js.timers._
 import scala.util.Success
 
 @nowarn("msg=dead code") // because throw in async marco
+@nowarn("msg=unused value")
 class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
   implicit val ec                        = org.scalajs.macrotaskexecutor.MacrotaskExecutor
   implicit override def executionContext = scala.scalajs.concurrent.JSExecutionContext.Implicits.queue

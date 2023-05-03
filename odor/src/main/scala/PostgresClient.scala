@@ -17,7 +17,6 @@ import scala.scalajs.js.annotation.JSImport
 import scala.util.{Failure, Success}
 import scala.annotation.nowarn
 
-@nowarn("msg=never used")
 @nowarn("msg=dead code")
 @js.native
 @JSImport("pg-types", JSImport.Namespace)
@@ -49,12 +48,13 @@ object DisableAutomaticTypeParsing {
 class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient])(implicit
   ec: ExecutionContext,
 ) {
-  DisableAutomaticTypeParsing
+  DisableAutomaticTypeParsing: Unit
 
   private val pool = new PgPool(poolConfig)
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
 
+  @nowarn("msg=unused value")
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
     val pgClient = new PostgresClient(this)
 
@@ -80,6 +80,7 @@ object PostgresConnectionPool {
   // https://node-postgres.com/api/pool
 }
 
+@nowarn("msg=unused value")
 class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionContext) {
 
   private var pgClientIsInitialized = false
@@ -120,6 +121,7 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
     ()
   }
 
+  @nowarn("msg=unused value")
   def query[PARAMS, ROW](
     query: Query[PARAMS, ROW],
     params: PARAMS = Void,
@@ -157,6 +159,7 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
 
 }
 
+@nowarn("msg=unused value")
 object PostgresClient {
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
