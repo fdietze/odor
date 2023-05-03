@@ -46,32 +46,62 @@ object DisableAutomaticTypeParsing {
   PgTypes.getTypeParser = { (_, _) => raw => raw }
 }
 
-class PostgresConnectionPool(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext) {
+class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient])(implicit
+  ec: ExecutionContext,
+) {
   DisableAutomaticTypeParsing
-
-  // https://node-postgres.com/api/pool
-  private val poolConfig = PgPoolConfig[PgClient]()
-    .setConnectionString(connectionString)
-    .setMax(maxConnections.toDouble)
 
   private val pool = new PgPool(poolConfig)
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
 
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
-    val poolClient = await(acquireConnection())
-    poolClient.on("error", (err: Any) => println(s"Postgres connection error: $err"))
-    val pgClient   = new PostgresClient(this, poolClient)
+    val pgClient = new PostgresClient(this)
+
     val codeResult = await(code(pgClient).attempt)
-    poolClient.release()
+
+    await(pgClient.release())
+
     codeResult match {
       case Left(err)  => throw err
       case Right(res) => res
     }
   }
+
+  def end(): Future[Unit] = pool.end().toFuture
+}
+object PostgresConnectionPool {
+  def apply(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext): PostgresConnectionPool =
+    new PostgresConnectionPool(
+      PgPoolConfig[PgClient]()
+        .setConnectionString(connectionString)
+        .setMax(maxConnections.toDouble),
+    )
+  // https://node-postgres.com/api/pool
 }
 
-class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(implicit ec: ExecutionContext) {
+class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionContext) {
+
+  private var pgClientIsInitialized = false
+  private var pgClientIsReleased    = false
+
+  private lazy val connection: Future[PoolClient] = {
+    if (pgClientIsReleased) Future.failed(new IllegalStateException("PostgresClient already released"))
+    else {
+      pgClientIsInitialized = true
+      async {
+        val poolClient = await(pool.acquireConnection())
+        poolClient.on("error", (err: Any) => println(s"Postgres connection error: $err"))
+        poolClient
+      }
+    }
+  }
+
+  def release(): Future[Unit] = if (!pgClientIsReleased) {
+    pgClientIsReleased = true
+    if (pgClientIsInitialized) connection.map(_.release())
+    else Future.successful(())
+  } else Future.successful(())
 
   val transactionSemaphore: Future[Semaphore[IO]] = Semaphore[IO](1).unsafeToFuture()
 
@@ -80,7 +110,7 @@ class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(i
     params: PARAMS = Void,
   ): Future[Unit] = async {
     await(
-      connection
+      await(connection)
         .query(
           command.sql,
           command.encoder.encode(params).map(_.orNull).toJSArray,
@@ -95,7 +125,7 @@ class PostgresClient(val pool: PostgresConnectionPool, connection: PoolClient)(i
     params: PARAMS = Void,
   ): Future[Vector[ROW]] = async {
     val result = await(
-      connection
+      await(connection)
         .query[js.Array[js.Any], js.Array[js.Any]](
           QueryArrayConfig[js.Array[js.Any]](query.sql),
           query.encoder.encode(params).map(_.orNull.asInstanceOf[js.Any]).toJSArray,
