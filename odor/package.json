@@ -1,7 +1,7 @@
 {
   "license": "UNLICENSED",
   "dependencies": {
-    "@types/pg": "8.10.1",
+    "@types/pg": "8.10.2",
     "@types/pg-pool": "^2.0.3",
     "pg": "8.11.0",
     "pg-pool": "^3.5.2"
