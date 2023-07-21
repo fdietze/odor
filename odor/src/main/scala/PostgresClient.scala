@@ -150,8 +150,8 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
         case Right(decodedRow) => decodedRow
       }
     }.toVector
-    val durationNanos = nowNano() - startTimeNanos
     if (PostgresClient.tracing) {
+      val durationNanos = nowNano() - startTimeNanos
       val durationMillis = durationNanos / 1000000
       println(f"[${durationMillis}%4dms] [${returnedRows.length}%4d rows] ${query.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}")
     }
