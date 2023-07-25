@@ -45,7 +45,7 @@ object DisableAutomaticTypeParsing {
   PgTypes.getTypeParser = { (_, _) => raw => raw }
 }
 
-class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient])(implicit
+class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTimes: Boolean = false)(implicit
   ec: ExecutionContext,
 ) {
   DisableAutomaticTypeParsing: Unit
@@ -150,10 +150,12 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
         case Right(decodedRow) => decodedRow
       }
     }.toVector
-    if (PostgresClient.tracing) {
-      val durationNanos = nowNano() - startTimeNanos
+    if (pool.logQueryTimes) {
+      val durationNanos  = nowNano() - startTimeNanos
       val durationMillis = durationNanos / 1000000
-      println(f"[${durationMillis}%4dms] [${returnedRows.length}%4d rows] ${query.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}")
+      println(
+        f"[${durationMillis}%4dms] [${returnedRows.length}%4d rows] ${query.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}",
+      )
     }
     returnedRows
   }
@@ -170,9 +172,6 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
 
 @nowarn("msg=unused value")
 object PostgresClient {
-  // logs query timings
-  var tracing = false
-
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
     command: Command[Void] => Future[Unit],
