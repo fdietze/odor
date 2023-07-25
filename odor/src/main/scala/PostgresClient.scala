@@ -46,7 +46,7 @@ object DisableAutomaticTypeParsing {
   PgTypes.getTypeParser = { (_, _) => raw => raw }
 }
 
-class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient])(implicit
+class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTimes: Boolean = false)(implicit
   ec: ExecutionContext,
 ) {
   DisableAutomaticTypeParsing
@@ -120,10 +120,12 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
     ()
   }
 
+  private def nowNano() = System.nanoTime()
   def query[PARAMS, ROW](
     query: Query[PARAMS, ROW],
     params: PARAMS = Void,
   ): Future[Vector[ROW]] = async {
+    val startTimeNanos = nowNano()
     val result = await(
       await(connection)
         .query[js.Array[js.Any], js.Array[js.Any]](
@@ -132,7 +134,7 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
         )
         .toFuture,
     )
-    result.rows.view.map { row =>
+    val returnedRows = result.rows.view.map { row =>
       query.decoder.decode(
         0,
         row.view.map { any =>
@@ -145,6 +147,14 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
         case Right(decodedRow) => decodedRow
       }
     }.toVector
+    if (pool.logQueryTimes) {
+      val durationNanos  = nowNano() - startTimeNanos
+      val durationMillis = durationNanos / 1000000
+      println(
+        f"[${durationMillis}%4dms] [${returnedRows.length}%4d rows] ${query.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}",
+      )
+    }
+    returnedRows
   }
 
   def querySingleRow[PARAMS, ROW](queryFragment: Query[PARAMS, ROW], params: PARAMS = Void): Future[ROW] = async {
