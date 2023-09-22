@@ -119,7 +119,7 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
         )
         .toFuture,
     )
-    val affectedRows = result.rowCount.toInt
+    val affectedRows = Try(result.rowCount.toInt).orElse(Try(result.rows.length)).getOrElse(0)
     if (pool.logQueryTimes) {
       val durationNanos  = nowNano() - startTimeNanos
       val durationMillis = durationNanos / 1000000
