@@ -16,6 +16,7 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
 import scala.util.{Failure, Success}
 import scala.annotation.nowarn
+import scala.util.Try
 
 @nowarn("msg=never used")
 @nowarn("msg=dead code")
