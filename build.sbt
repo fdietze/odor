@@ -1,7 +1,7 @@
 name                           := "Odor"
 ThisBuild / organization       := "com.github.fdietze"
-ThisBuild / crossScalaVersions := Seq("2.13.8")
-ThisBuild / scalaVersion       := "2.13.8"
+ThisBuild / crossScalaVersions := Seq("2.13.10")
+ThisBuild / scalaVersion       := "2.13.10"
 
 inThisBuild(
   List(
@@ -20,7 +20,7 @@ inThisBuild(
 )
 
 val versions = new {
-  val scalaTest = "3.2.15"
+  val scalaTest = "3.2.17"
 }
 
 lazy val scalaJsMacrotaskExecutor = Seq(
@@ -70,7 +70,7 @@ lazy val odor = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "org.tpolecat" %%% "skunk-core" % "0.5.1",
+      "org.tpolecat" %%% "skunk-core" % "0.6.0",
     ),
     Compile / npmDependencies    ++= readJsDependencies(baseDirectory.value, "dependencies"),
     Compile / npmDevDependencies ++= readJsDependencies(baseDirectory.value, "devDependencies"),
@@ -87,5 +87,6 @@ lazy val odor = project
       "pgPool.mod.^",
       "pgPool.mod.Config",
     ),
-    useYarn := true, // Makes scalajs-bundler use yarn instead of npm
+    useYarn        := true, // Makes scalajs-bundler use yarn instead of npm
+    yarnExtraArgs ++= Seq("--prefer-offline", "--pure-lockfile"),
   )
