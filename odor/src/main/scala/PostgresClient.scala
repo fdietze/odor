@@ -79,7 +79,6 @@ object PostgresConnectionPool {
   // https://node-postgres.com/api/pool
 }
 
-@nowarn("msg=unused value")
 class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionContext) {
 
   private var pgClientIsInitialized = false
