@@ -54,7 +54,6 @@ class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTim
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
 
-  @nowarn("msg=unused value")
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
     val pgClient = new PostgresClient(this)
 
@@ -123,7 +122,6 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
 
   private def nowNano() = System.nanoTime()
 
-  @nowarn("msg=unused value")
   def query[PARAMS, ROW](
     query: Query[PARAMS, ROW],
     params: PARAMS = Void,
@@ -170,7 +168,6 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
 
 }
 
-@nowarn("msg=unused value")
 object PostgresClient {
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
