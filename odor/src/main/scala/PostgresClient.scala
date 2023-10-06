@@ -16,8 +16,8 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
 import scala.util.{Failure, Success}
 import scala.annotation.nowarn
+import scala.util.Try
 
-@nowarn("msg=never used")
 @nowarn("msg=dead code")
 @js.native
 @JSImport("pg-types", JSImport.Namespace)
@@ -49,12 +49,13 @@ object DisableAutomaticTypeParsing {
 class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTimes: Boolean = false)(implicit
   ec: ExecutionContext,
 ) {
-  DisableAutomaticTypeParsing
+  DisableAutomaticTypeParsing: Unit
 
   private val pool = new PgPool(poolConfig)
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
 
+  @nowarn("msg=unused value")
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
     val pgClient = new PostgresClient(this)
 
@@ -80,6 +81,7 @@ object PostgresConnectionPool {
   // https://node-postgres.com/api/pool
 }
 
+@nowarn("msg=unused value")
 class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionContext) {
 
   private var pgClientIsInitialized = false
@@ -109,18 +111,30 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
     command: Command[PARAMS],
     params: PARAMS = Void,
   ): Future[Unit] = async {
-    await(
-      await(connection)
+    val conn           = await(connection)
+    val startTimeNanos = nowNano()
+    val result = await(
+      conn
         .query(
           command.sql,
           command.encoder.encode(params).map(_.orNull).toJSArray,
         )
         .toFuture,
     )
+    if (pool.logQueryTimes) {
+      val affectedRows   = Try(result.rowCount.toInt).getOrElse(result.rows.length)
+      val durationNanos  = nowNano() - startTimeNanos
+      val durationMillis = durationNanos / 1000000
+      println(
+        f"[${durationMillis}%4dms] [${affectedRows}%4d rows] ${command.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}",
+      )
+    }
     ()
   }
 
   private def nowNano() = System.nanoTime()
+
+  @nowarn("msg=unused value")
   def query[PARAMS, ROW](
     query: Query[PARAMS, ROW],
     params: PARAMS = Void,
@@ -167,6 +181,7 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
 
 }
 
+@nowarn("msg=unused value")
 object PostgresClient {
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
