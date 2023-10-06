@@ -87,5 +87,6 @@ lazy val odor = project
       "pgPool.mod.^",
       "pgPool.mod.Config",
     ),
-    useYarn := true, // Makes scalajs-bundler use yarn instead of npm
+    useYarn        := true, // Makes scalajs-bundler use yarn instead of npm
+    yarnExtraArgs ++= Seq("--prefer-offline", "--pure-lockfile"),
   )
