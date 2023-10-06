@@ -16,6 +16,7 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
 import scala.util.{Failure, Success}
 import scala.annotation.nowarn
+import scala.util.Try
 
 @nowarn("msg=dead code")
 @js.native
@@ -110,14 +111,24 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
     command: Command[PARAMS],
     params: PARAMS = Void,
   ): Future[Unit] = async {
-    await(
-      await(connection)
+    val conn           = await(connection)
+    val startTimeNanos = nowNano()
+    val result = await(
+      conn
         .query(
           command.sql,
           command.encoder.encode(params).map(_.orNull).toJSArray,
         )
         .toFuture,
     )
+    if (pool.logQueryTimes) {
+      val affectedRows   = Try(result.rowCount.toInt).getOrElse(result.rows.length)
+      val durationNanos  = nowNano() - startTimeNanos
+      val durationMillis = durationNanos / 1000000
+      println(
+        f"[${durationMillis}%4dms] [${affectedRows}%4d rows] ${command.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}",
+      )
+    }
     ()
   }
 
