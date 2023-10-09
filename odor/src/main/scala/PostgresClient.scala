@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.std.Semaphore
 import cats.effect.unsafe.implicits.{global => unsafeIORuntimeGlobal}
 import cats.implicits._
-import odor.facades.pg.mod.{Client => PgClient, PoolClient, QueryArrayConfig}
+import odor.facades.pg.mod.{Client => PgClient, PoolClient, QueryArrayConfig, QueryResult}
 import odor.facades.pgPool.mod.{^ => PgPool, Config => PgPoolConfig}
 import skunk._
 import skunk.implicits._
@@ -12,11 +12,11 @@ import skunk.implicits._
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
+import scala.scalajs.js.|
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
 import scala.util.{Failure, Success}
 import scala.annotation.nowarn
-import scala.util.Try
 
 @nowarn("msg=dead code")
 @js.native
@@ -113,21 +113,40 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
   ): Future[Unit] = async {
     val conn           = await(connection)
     val startTimeNanos = nowNano()
-    val result = await(
+    val resultOrArray = await(
       conn
         .query(
           command.sql,
           command.encoder.encode(params).map(_.orNull).toJSArray,
         )
         .toFuture,
-    )
+    ).asInstanceOf[
+      QueryResult[Nothing] | js.Array[QueryResult[Nothing]],
+    ] // query returns either a single result or an array of results (the typescript facade and docs are wrong)
     if (pool.logQueryTimes) {
-      val affectedRows   = Try(result.rowCount.toInt).getOrElse(result.rows.length)
       val durationNanos  = nowNano() - startTimeNanos
       val durationMillis = durationNanos / 1000000
-      println(
-        f"[${durationMillis}%4dms] [${affectedRows}%4d rows] ${command.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}",
-      )
+      if (resultOrArray.isInstanceOf[js.Array[_]]) {
+        val resultArray    = resultOrArray.asInstanceOf[js.Array[QueryResult[Any]]]
+        val statementCount = resultArray.length
+        println(
+          f"[${durationMillis}%4dms] [${statementCount}%4d statements] ${command.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}",
+        )
+      } else {
+        val result = resultOrArray.asInstanceOf[QueryResult[Any]]
+        val affectedRows =
+          result
+            .asInstanceOf[js.Dynamic] // the typescript types are wrong for `rowCount`
+            .rowCount
+            .asInstanceOf[js.UndefOr[Double]]
+            .toOption
+            .map(_.toInt)
+            .getOrElse(result.rows.length)
+        println(
+          f"[${durationMillis}%4dms] [${affectedRows}%4d rows] ${command.sql.linesIterator.map(_.trim).filter(_.nonEmpty).mkString(" ").take(60)}",
+        )
+      }
+
     }
     ()
   }
@@ -147,7 +166,7 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
           query.encoder.encode(params).map(_.orNull.asInstanceOf[js.Any]).toJSArray,
         )
         .toFuture,
-    )
+    ) // TODO: if multiple select statements are sent, this is .asInstanceOf[QueryResult[Nothing] | js.Array[QueryResult[Nothing]]]
     val returnedRows = result.rows.view.map { row =>
       query.decoder.decode(
         0,
