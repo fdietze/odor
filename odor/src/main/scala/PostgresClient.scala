@@ -43,13 +43,13 @@ object DisableAutomaticTypeParsing {
 
   // Internally, pg-node requests a type-parser for every returned type (oid) of a result set.
   // By letting it always return the identity function, we're overwriting all parsers at once:
-  PgTypes.getTypeParser = { (_, _) => raw => raw }
+  def apply(): Unit = PgTypes.getTypeParser = { (_, _) => raw => raw }
 }
 
 class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTimes: Boolean = false)(implicit
   ec: ExecutionContext,
 ) {
-  DisableAutomaticTypeParsing: Unit
+  DisableAutomaticTypeParsing()
 
   private val pool = new PgPool(poolConfig)
 
