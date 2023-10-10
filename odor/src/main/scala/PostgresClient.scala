@@ -173,7 +173,8 @@ class PostgresClient(val pool: PostgresConnectionPool)(implicit ec: ExecutionCon
         row.view.map { any =>
           // The facade has an any type, because pg-node officially decodes values to native javascript types.
           // We have this feature disabled and assume it's a String.
-          Option(any.asInstanceOf[String])
+          if (any == null) None
+          else Option(any.toString)
         }.toList,
       ) match {
         case Left(err)         => throw new Exception(err.message)
