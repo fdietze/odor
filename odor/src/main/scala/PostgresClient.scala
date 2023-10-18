@@ -4,53 +4,24 @@ import cats.effect.IO
 import cats.effect.std.Semaphore
 import cats.effect.unsafe.implicits.{global => unsafeIORuntimeGlobal}
 import cats.implicits._
-import odor.facades.pg.mod.{Client => PgClient, PoolClient, QueryArrayConfig, QueryResult}
-import odor.facades.pgPool.mod.{^ => PgPool, Config => PgPoolConfig}
+import odor.facades.pg.anon.FnCall
+import odor.facades.pg.mod.{CustomTypesConfig, PoolClient, QueryArrayConfig, QueryResult, Client => PgClient}
+import odor.facades.pgPool.mod.{Config => PgPoolConfig, ^ => PgPool}
+import odor.facades.pgTypes.mod.{TypeFormat, TypeId}
 import skunk._
 import skunk.implicits._
 
+import scala.annotation.nowarn
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
-import scala.scalajs.js.|
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.annotation.JSImport
+import scala.scalajs.js.|
 import scala.util.{Failure, Success}
-import scala.annotation.nowarn
-
-@nowarn("msg=dead code")
-@js.native
-@JSImport("pg-types", JSImport.Namespace)
-object PgTypes extends js.Object {
-  def setTypeParser(oid: Int, format: String, parseFn: js.Function1[String, js.Any]): Unit = js.native
-  var getTypeParser: js.Function2[Int, String, js.Function1[String, js.Any]]               = js.native
-}
-
-object DisableAutomaticTypeParsing {
-  // pg-node has automatic type coercion:
-  // https://node-postgres.com/features/types
-  // It means, that it parses the raw types it gets from postgres into corresponding javascript types.
-  // But with Skunk as a frontend, we already have these mechanics.
-  //
-  // Here, we're replacing all parsers with the identity function, so that we can pass on the raw data from postgres to Skunk.
-
-  // list of all implemented parsers in pg-node:
-  // https://github.com/brianc/node-pg-types/blob/8594bc6befca3523e265022f303f1376f679b5dc/lib/textParsers.js
-
-  // Official way to overwrite a single parser:
-  // https://github.com/brianc/node-postgres/blob/master/packages/pg/test/integration/client/huge-numeric-tests.js
-  // PgTypes.setTypeParser(16, "text", x => x) // 16 = OID of BOOL
-
-  // Internally, pg-node requests a type-parser for every returned type (oid) of a result set.
-  // By letting it always return the identity function, we're overwriting all parsers at once:
-  def apply(): Unit = PgTypes.getTypeParser = { (_, _) => raw => raw }
-}
 
 class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTimes: Boolean = false)(implicit
   ec: ExecutionContext,
 ) {
-  DisableAutomaticTypeParsing()
-
   private val pool = new PgPool(poolConfig)
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
@@ -72,10 +43,33 @@ class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTim
   def end(): Future[Unit] = pool.end().toFuture
 }
 object PostgresConnectionPool {
+  private val typesConfig = {
+    // pg-node has automatic type coercion:
+    // https://node-postgres.com/features/types
+    // It means, that it parses the raw types it gets from postgres into corresponding javascript types.
+    // But with Skunk as a frontend, we already have these mechanics.
+    //
+    // Here, we're replacing all parsers with the identity function, so that we can pass on the raw data from postgres to Skunk.
+
+    // list of all implemented parsers in pg-node:
+    // https://github.com/brianc/node-pg-types/blob/8594bc6befca3523e265022f303f1376f679b5dc/lib/textParsers.js
+
+    // Test, which uses custom type parsers:
+    // https://github.com/brianc/node-postgres/blob/b1a8947738ce0af004cb926f79829bb2abc64aa6/packages/pg/test/integration/client/custom-types-tests.js
+
+    // Internally, pg-node requests a type-parser for every returned type (oid) of a result set.
+    // By letting it always return the identity function, we're overwriting all parsers at once:
+    type GetTypeParserFn = js.Function2[TypeId, TypeFormat, js.Function1[String, js.Any]]
+    val identityTypeParser:GetTypeParserFn = (_, _) => (raw => raw)
+    CustomTypesConfig(identityTypeParser.asInstanceOf[FnCall])
+  }
+
+
   def apply(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext): PostgresConnectionPool =
     new PostgresConnectionPool(
       PgPoolConfig[PgClient]()
         .setConnectionString(connectionString)
+        .setTypes(typesConfig)
         .setMax(maxConnections.toDouble),
     )
   // https://node-postgres.com/api/pool
