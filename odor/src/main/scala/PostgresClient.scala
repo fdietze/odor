@@ -5,8 +5,8 @@ import cats.effect.std.Semaphore
 import cats.effect.unsafe.implicits.{global => unsafeIORuntimeGlobal}
 import cats.implicits._
 import odor.facades.pg.anon.FnCall
-import odor.facades.pg.mod.{CustomTypesConfig, PoolClient, QueryArrayConfig, QueryResult, Client => PgClient}
-import odor.facades.pgPool.mod.{Config => PgPoolConfig, ^ => PgPool}
+import odor.facades.pg.mod.{Client => PgClient, CustomTypesConfig, PoolClient, QueryArrayConfig, QueryResult}
+import odor.facades.pgPool.mod.{^ => PgPool, Config => PgPoolConfig}
 import odor.facades.pgTypes.mod.{TypeFormat, TypeId}
 import skunk._
 import skunk.implicits._
@@ -60,10 +60,9 @@ object PostgresConnectionPool {
     // Internally, pg-node requests a type-parser for every returned type (oid) of a result set.
     // By letting it always return the identity function, we're overwriting all parsers at once:
     type GetTypeParserFn = js.Function2[TypeId, TypeFormat, js.Function1[String, js.Any]]
-    val identityTypeParser:GetTypeParserFn = (_, _) => (raw => raw)
+    val identityTypeParser: GetTypeParserFn = (_, _) => raw => raw
     CustomTypesConfig(identityTypeParser.asInstanceOf[FnCall])
   }
-
 
   def apply(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext): PostgresConnectionPool =
     new PostgresConnectionPool(
