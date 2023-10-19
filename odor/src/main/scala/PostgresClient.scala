@@ -64,12 +64,15 @@ object PostgresConnectionPool {
     CustomTypesConfig(identityTypeParser.asInstanceOf[FnCall])
   }
 
-  def apply(connectionString: String, maxConnections: Int)(implicit ec: ExecutionContext): PostgresConnectionPool =
+  def apply(connectionString: String, maxConnections: Int, logQueryTimes: Boolean = false)(implicit
+    ec: ExecutionContext,
+  ): PostgresConnectionPool =
     new PostgresConnectionPool(
       PgPoolConfig[PgClient]()
         .setConnectionString(connectionString)
         .setTypes(typesConfig)
         .setMax(maxConnections.toDouble),
+      logQueryTimes = logQueryTimes,
     )
   // https://node-postgres.com/api/pool
 }
