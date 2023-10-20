@@ -22,6 +22,9 @@ import scala.util.{Failure, Success}
 class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTimes: Boolean = false)(implicit
   ec: ExecutionContext,
 ) {
+
+  poolConfig.setTypes(PostgresConnectionPool.typesConfig)
+
   private val pool = new PgPool(poolConfig)
 
   def acquireConnection(): Future[PoolClient] = pool.connect().toFuture
@@ -70,7 +73,6 @@ object PostgresConnectionPool {
     new PostgresConnectionPool(
       PgPoolConfig[PgClient]()
         .setConnectionString(connectionString)
-        .setTypes(typesConfig)
         .setMax(maxConnections.toDouble),
       logQueryTimes = logQueryTimes,
     )
