@@ -23,7 +23,7 @@ class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTim
   ec: ExecutionContext,
 ) {
 
-  poolConfig.setTypes(PostgresConnectionPool.typesConfig):Unit
+  poolConfig.setTypes(PostgresConnectionPool.typesConfig): Unit
 
   private val pool = new PgPool(poolConfig)
 
