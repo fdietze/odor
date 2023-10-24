@@ -21,6 +21,7 @@ class DockerTests extends AsyncFlatSpec {
   lazy val pool: PostgresConnectionPool =
     PostgresConnectionPool(PG_CONNECTION_STRING, maxConnections = 10)
 
+  // maybe these two `assert{Session,Current}isolationLevel()` actually return the same values, I'm not sure.
   def assertSessionTransactionLevel(level: IsolationLevel.ReadCommitted, pgClient: PostgresClient): Future[Unit] =
     async {
       val sessionLevel: String =
@@ -99,8 +100,4 @@ class DockerTests extends AsyncFlatSpec {
 
     succeed
   }
-
-  // "PostgresClient" should "respect TransactionIsolationMode.PerTransaction" in async {
-  //   ???
-  // }
 }
