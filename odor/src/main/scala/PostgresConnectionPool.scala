@@ -19,11 +19,16 @@ import scala.async.Async.await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.scalajs.js
+import odor.TransactionIsolationMode.PerSession
+import odor.TransactionIsolationMode.PerTransaction
 
-class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTimes: Boolean = false)(implicit
+class PostgresConnectionPool(
+  poolConfig: PgPoolConfig[PgClient],
+  val logQueryTimes: Boolean = false,
+)(implicit
   ec: ExecutionContext,
 ) {
-
+  // see comment on `PostgresConnectionPool.typesConfig`
   poolConfig.setTypes(PostgresConnectionPool.typesConfig): Unit
 
   private val pool = new PgPool(poolConfig)
@@ -33,21 +38,22 @@ class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTim
   @nowarn("msg=unused value")
   def useConnection[R](
     isolationLevel: IsolationLevel = IsolationLevel.Default,
+    isolationMode: TransactionIsolationMode = TransactionIsolationMode.PerSession,
   )(
     code: PostgresClient { type TransactionIsolationLevel <: isolationLevel.type } => Future[R],
   ): Future[R] = async {
-    val pgClient = new PostgresClient(this, isolationLevel) {
+    val pgClient = new PostgresClient(this, isolationLevel, isolationMode) {
       override type TransactionIsolationLevel <: isolationLevel.type
     }
 
-    isolationLevel.postgresNameFrag match {
-      case Some(isolationLevelFrag) =>
+    (isolationMode, isolationLevel.postgresNameFrag) match {
+      case (PerSession, Some(isolationLevelFrag)) =>
         await(
           pgClient.command(
             sql"SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL $isolationLevelFrag".command,
           ),
         )
-      case None =>
+      case (PerSession, None) | (PerTransaction, _) =>
     }
 
     val codeResult = await(code(pgClient).attempt)
@@ -62,6 +68,7 @@ class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTim
 
   def end(): Future[Unit] = pool.end().toFuture
 }
+
 object PostgresConnectionPool {
   private val typesConfig = {
     // pg-node has automatic type coercion:
@@ -84,7 +91,11 @@ object PostgresConnectionPool {
     CustomTypesConfig(identityTypeParser.asInstanceOf[FnCall])
   }
 
-  def apply(connectionString: String, maxConnections: Int, logQueryTimes: Boolean = false)(implicit
+  def apply(
+    connectionString: String,
+    maxConnections: Int,
+    logQueryTimes: Boolean = false,
+  )(implicit
     ec: ExecutionContext,
   ): PostgresConnectionPool =
     new PostgresConnectionPool(

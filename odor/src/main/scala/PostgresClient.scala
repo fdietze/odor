@@ -22,9 +22,14 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.|
 import scala.util.Failure
 import scala.util.Success
+import odor.TransactionIsolationMode.PerSession
+import odor.TransactionIsolationMode.PerTransaction
 
-@nowarn("msg=unused value")
-class PostgresClient(val pool: PostgresConnectionPool, val transactionIsolationLevel: IsolationLevel)(implicit
+class PostgresClient(
+  val pool: PostgresConnectionPool,
+  val transactionIsolationLevel: IsolationLevel,
+  val transactionIsolationMode: TransactionIsolationMode,
+)(implicit
   ec: ExecutionContext,
 ) {
 
@@ -33,6 +38,7 @@ class PostgresClient(val pool: PostgresConnectionPool, val transactionIsolationL
 
   type TransactionIsolationLevel <: IsolationLevel
 
+  @nowarn("msg=unused value of type odor\\.facades\\.pg\\.mod\\.PoolClient")
   private lazy val connection: Future[PoolClient] = {
     if (pgClientIsReleased) Future.failed(new IllegalStateException("PostgresClient already released"))
     else {
@@ -99,7 +105,7 @@ class PostgresClient(val pool: PostgresConnectionPool, val transactionIsolationL
 
   private def nowNano() = System.nanoTime()
 
-  @nowarn("msg=unused value")
+  @nowarn("msg=unused value of type scala\\.collection\\.immutable\\.Vector\\[ROW\\]")
   def query[PARAMS, ROW](
     query: Query[PARAMS, ROW],
     params: PARAMS = Void,
@@ -137,31 +143,44 @@ class PostgresClient(val pool: PostgresConnectionPool, val transactionIsolationL
     returnedRows
   }
 
+  @nowarn("msg=unused value of type ROW")
   def querySingleRow[PARAMS, ROW](queryFragment: Query[PARAMS, ROW], params: PARAMS = Void): Future[ROW] = async {
     val rows = await(query[PARAMS, ROW](queryFragment, params))
     if (rows.isEmpty) throw new RuntimeException("Requested single row, but got no rows.")
     rows.head
   }
 
-  val tx = new PostgresClient.Transaction(transactionSemaphore, command[Void](_))
+  val tx = new PostgresClient.Transaction(
+    transactionSemaphore,
+    command[Void](_),
+    isolationLevel = transactionIsolationMode match {
+      case PerTransaction => Some(transactionIsolationLevel)
+      case PerSession     => None
+    },
+  )
 
 }
 
-@nowarn("msg=unused value")
 object PostgresClient {
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
     command: Command[Void] => Future[Unit],
+    isolationLevel: Option[IsolationLevel],
   )(implicit ec: ExecutionContext) {
 
     private var recursion = 0
 
+    @nowarn("msg=unused value of type T")
     def apply[T](code: => Future[T]): Future[T] = async {
       val semaphore = await(transactionSemaphore)
 
       if (recursion == 0) {
         await(semaphore.acquire.unsafeToFuture()) // wait until other transaction has finished
-        await(command(sql"BEGIN".command).attempt) match {
+        val isolationFrag = isolationLevel
+          .flatMap(_.postgresNameFrag)
+          .map(f => sql"; SET TRANSACTION ISOLATION LEVEL $f")
+          .getOrElse(Fragment.empty)
+        await(command(sql"BEGIN$isolationFrag".command).attempt) match {
           case Left(err) =>
             await(semaphore.release.unsafeToFuture())
             throw err
