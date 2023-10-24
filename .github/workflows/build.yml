@@ -42,6 +42,8 @@ jobs:
             ~/.cache/scalablytyped
           key: ${{ runner.os }}-scalablytyped-${{ hashFiles('*/package.json') }}
 
+      - name: Start docker compose
+        run: docker-compose up -d
 
       - name: Compile & Test
         run: |
