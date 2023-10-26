@@ -11,7 +11,6 @@ import odor.facades.pgPool.mod.{Config => PgPoolConfig}
 import odor.facades.pgPool.mod.{^ => PgPool}
 import odor.facades.pgTypes.mod.TypeFormat
 import odor.facades.pgTypes.mod.TypeId
-import skunk.implicits._
 
 import scala.annotation.nowarn
 import scala.async.Async.async
@@ -19,8 +18,6 @@ import scala.async.Async.await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.scalajs.js
-import odor.TransactionIsolationMode.PerSession
-import odor.TransactionIsolationMode.PerTransaction
 
 class PostgresConnectionPool(
   poolConfig: PgPoolConfig[PgClient],
@@ -38,22 +35,11 @@ class PostgresConnectionPool(
   @nowarn("msg=unused value")
   def useConnection[R](
     isolationLevel: IsolationLevel = IsolationLevel.Default,
-    isolationMode: TransactionIsolationMode = TransactionIsolationMode.PerSession,
   )(
     code: PostgresClient { type TransactionIsolationLevel <: isolationLevel.type } => Future[R],
   ): Future[R] = async {
-    val pgClient = new PostgresClient(this, isolationLevel, isolationMode) {
+    val pgClient = new PostgresClient(this, isolationLevel) {
       override type TransactionIsolationLevel <: isolationLevel.type
-    }
-
-    (isolationMode, isolationLevel.postgresNameFrag) match {
-      case (PerSession, Some(isolationLevelFrag)) =>
-        await(
-          pgClient.command(
-            sql"SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL $isolationLevelFrag".command,
-          ),
-        )
-      case (PerSession, None) | (PerTransaction, _) =>
     }
 
     val codeResult = await(code(pgClient).attempt)

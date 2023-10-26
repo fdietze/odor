@@ -38,16 +38,3 @@ object IsolationLevel {
     override val postgresNameFrag = Some(const"serializable")
   }
 }
-
-/** When to set the specified `IsolationLevel`.
-  *
-  * Some postgres-proxies might not support setting the isolation level per-session, in which case `PerTransaction` can
-  * be chosen instead. This which will not set a session-wide isolation level, but instead set the isolation level at
-  * the start of each transaction.
-  */
-sealed trait TransactionIsolationMode
-
-object TransactionIsolationMode {
-  case object PerSession     extends TransactionIsolationMode
-  case object PerTransaction extends TransactionIsolationMode
-}

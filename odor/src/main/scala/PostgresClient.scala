@@ -22,13 +22,10 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.|
 import scala.util.Failure
 import scala.util.Success
-import odor.TransactionIsolationMode.PerSession
-import odor.TransactionIsolationMode.PerTransaction
 
 class PostgresClient(
   val pool: PostgresConnectionPool,
   val transactionIsolationLevel: IsolationLevel,
-  val transactionIsolationMode: TransactionIsolationMode,
 )(implicit
   ec: ExecutionContext,
 ) {
@@ -153,9 +150,9 @@ class PostgresClient(
   val tx = new PostgresClient.Transaction(
     transactionSemaphore,
     command[Void](_),
-    isolationLevel = transactionIsolationMode match {
-      case PerTransaction => Some(transactionIsolationLevel)
-      case PerSession     => None
+    isolationLevel = transactionIsolationLevel match {
+      case IsolationLevel.Default              => None
+      case level: IsolationLevel.ReadCommitted => Some(level)
     },
   )
 
@@ -165,7 +162,7 @@ object PostgresClient {
   class Transaction(
     transactionSemaphore: Future[Semaphore[IO]],
     command: Command[Void] => Future[Unit],
-    isolationLevel: Option[IsolationLevel],
+    isolationLevel: Option[IsolationLevel.ReadCommitted],
   )(implicit ec: ExecutionContext) {
 
     private var recursion = 0

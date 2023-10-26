@@ -21,19 +21,14 @@ class DockerTests extends AsyncFlatSpec {
   lazy val pool: PostgresConnectionPool =
     PostgresConnectionPool(PG_CONNECTION_STRING, maxConnections = 10)
 
-  // maybe these two `assert{Session,Current}isolationLevel()` actually return the same values, I'm not sure.
-  def assertSessionTransactionLevel(level: IsolationLevel.ReadCommitted, pgClient: PostgresClient): Future[Unit] =
+  def assertCurrentIsolationLevel(level: IsolationLevel.ReadCommitted, pgClient: PostgresClient): Future[Unit] =
     async {
-      val sessionLevel: String =
-        await(pgClient.querySingleRow(sql"SHOW TRANSACTION ISOLATION LEVEL".query(text)))
-      assert(sessionLevel == level.postgresName.get)
+      val currentLevel: String =
+        await(pgClient.tx {
+          pgClient.querySingleRow(sql"SHOW TRANSACTION ISOLATION LEVEL".query(text))
+        })
+      assert(currentLevel == level.postgresName.get)
     }
-
-  def assertCurrentIsolationLevel(level: IsolationLevel.ReadCommitted, pgClient: PostgresClient): Future[Unit] = async {
-    val currentLevel: String =
-      await(pgClient.querySingleRow(sql"SELECT CURRENT_SETTING('TRANSACTION_ISOLATION')".query(text)))
-    assert(currentLevel == level.postgresName.get)
-  }
 
   "PostgresConnectionPool" should "successfully execute a trivial SELECT" in {
     pool.useConnection() { pgClient =>
@@ -59,44 +54,6 @@ class DockerTests extends AsyncFlatSpec {
         },
       ),
     ): Unit
-
-    succeed
-  }
-
-  "PostgresConnectionPool" should "respect TransactionIsolationMode" in async {
-    await(
-      pool.useConnection(
-        isolationLevel = IsolationLevel.Serializable,
-        isolationMode = TransactionIsolationMode.PerSession,
-      ) { pgClient =>
-        assertSessionTransactionLevel(IsolationLevel.Serializable, pgClient)
-      },
-    )
-
-    // need a different pool for `PerTransaction`, or the session-setting will leak.
-    {
-      val pool = PostgresConnectionPool(PG_CONNECTION_STRING, maxConnections = 10)
-      await(
-        pool.useConnection(
-          isolationLevel = IsolationLevel.Serializable,
-          isolationMode = TransactionIsolationMode.PerTransaction,
-        ) { pgClient =>
-          // @nowarn("msg=unused value of type scala\\.concurrent\\.Future\\[Unit\\]")
-          val x = async {
-            await(assertSessionTransactionLevel(IsolationLevel.ReadCommitted, pgClient))
-
-            await(pgClient.tx {
-              async {
-                await(assertCurrentIsolationLevel(IsolationLevel.Serializable, pgClient))
-              }
-            })
-
-            await(assertSessionTransactionLevel(IsolationLevel.ReadCommitted, pgClient))
-          }
-          x
-        },
-      ): Unit
-    }
 
     succeed
   }
