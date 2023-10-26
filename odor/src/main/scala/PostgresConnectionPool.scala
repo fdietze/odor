@@ -19,9 +19,10 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.scalajs.js
 
-class PostgresConnectionPool(
+class PostgresConnectionPool[I <: IsolationLevel](
   poolConfig: PgPoolConfig[PgClient],
   val logQueryTimes: Boolean = false,
+  defaultIsolationLevel: I = IsolationLevel.Default,
 )(implicit
   ec: ExecutionContext,
 ) {
@@ -34,9 +35,11 @@ class PostgresConnectionPool(
 
   @nowarn("msg=unused value")
   def useConnection[R](
-    isolationLevel: IsolationLevel = IsolationLevel.Default,
+    isolationLevel: IsolationLevel = defaultIsolationLevel,
   )(
-    code: PostgresClient { type TransactionIsolationLevel <: isolationLevel.type } => Future[R],
+    code: PostgresClient {
+      type TransactionIsolationLevel <: isolationLevel.type;
+    } => Future[R],
   ): Future[R] = async {
     val pgClient = new PostgresClient(this, isolationLevel) {
       override type TransactionIsolationLevel <: isolationLevel.type
@@ -77,18 +80,20 @@ object PostgresConnectionPool {
     CustomTypesConfig(identityTypeParser.asInstanceOf[FnCall])
   }
 
-  def apply(
+  def apply[I <: IsolationLevel](
     connectionString: String,
     maxConnections: Int,
     logQueryTimes: Boolean = false,
+    defaultIsolationLevel: I = IsolationLevel.Default,
   )(implicit
     ec: ExecutionContext,
-  ): PostgresConnectionPool =
+  ): PostgresConnectionPool[I] =
     new PostgresConnectionPool(
       PgPoolConfig[PgClient]()
         .setConnectionString(connectionString)
         .setMax(maxConnections.toDouble),
       logQueryTimes = logQueryTimes,
+      defaultIsolationLevel = defaultIsolationLevel,
     )
   // https://node-postgres.com/api/pool
 }

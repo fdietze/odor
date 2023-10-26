@@ -24,7 +24,7 @@ import scala.util.Failure
 import scala.util.Success
 
 class PostgresClient(
-  val pool: PostgresConnectionPool,
+  val pool: PostgresConnectionPool[?],
   val transactionIsolationLevel: IsolationLevel,
 )(implicit
   ec: ExecutionContext,

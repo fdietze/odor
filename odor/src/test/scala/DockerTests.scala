@@ -8,9 +8,11 @@ import skunk.codec.all._
 
 import org.scalatest.flatspec.AsyncFlatSpec
 import scala.concurrent.Future
+import scala.annotation.unused
 
 // tests that require a running postgres instances (we use docker compose)
 @nowarn("msg=unused value of type org.scalatest.Assertion")
+@nowarn("msg=unused value of type org.scalatest.Succeeded.type")
 @nowarn("msg=discarded non-Unit value of type org.scalatest.Assertion")
 class DockerTests extends AsyncFlatSpec {
   implicit val ec                        = org.scalajs.macrotaskexecutor.MacrotaskExecutor
@@ -18,7 +20,7 @@ class DockerTests extends AsyncFlatSpec {
 
   final val PG_CONNECTION_STRING: String = "postgresql://postgres:test3@localhost:5532"
 
-  lazy val pool: PostgresConnectionPool =
+  lazy val pool: PostgresConnectionPool[?] =
     PostgresConnectionPool(PG_CONNECTION_STRING, maxConnections = 10)
 
   def assertCurrentIsolationLevel(level: IsolationLevel.ReadCommitted, pgClient: PostgresClient): Future[Unit] =
@@ -41,7 +43,7 @@ class DockerTests extends AsyncFlatSpec {
     }
   }
 
-  "PostgresConnectionPool" should "correctly set the transaction isolation level" in async {
+  "PostgresClient" should "correctly set the transaction isolation level" in async {
     await(
       Future.sequence(
         for (
@@ -56,5 +58,72 @@ class DockerTests extends AsyncFlatSpec {
     ): Unit
 
     succeed
+  }
+
+  "PostgresConnectionPool" should "set a default isolation level" in async {
+    val defaultLevel = IsolationLevel.RepeatableRead
+
+    val pool: PostgresConnectionPool[IsolationLevel.RepeatableRead] = PostgresConnectionPool(
+      PG_CONNECTION_STRING,
+      maxConnections = 2,
+      defaultIsolationLevel = defaultLevel,
+    )
+
+    await(pool.useConnection() { pgClient =>
+      assertCurrentIsolationLevel(defaultLevel, pgClient)
+    })
+
+    val overrideLevel = IsolationLevel.Serializable
+
+    await(pool.useConnection(isolationLevel = overrideLevel) { pgClient =>
+      assertCurrentIsolationLevel(overrideLevel, pgClient)
+    })
+
+    import org.scalatest.matchers.should.Matchers._
+
+    @unused
+    def serializable(
+      @unused p: PostgresClient { type TransactionIsolationLevel <: IsolationLevel.Serializable },
+    ): Future[Unit] = Future.unit
+
+    """
+    pool.useConnection() { pgClient =>
+      serializable(pgClient)
+    }
+    """ shouldNot typeCheck
+
+    """
+    pool.useConnection(isolationLevel = overrideLevel) { pgClient =>
+      serializable(pgClient)
+    }
+    """ should compile
+  }
+
+  "PostgresConnectionPool" should "propagate the default isolation level at compile time" in async {
+    import org.scalatest.matchers.should.Matchers._
+
+    // helper function that should only compile if the given `PostgresClient` has at least isolation level
+    // `RepeatableRead`.
+    @unused
+    def repeatableRead(
+      @unused p: PostgresClient { type TransactionIsolationLevel <: IsolationLevel.RepeatableRead },
+    ): Future[Unit] = Future.unit
+
+    // connection pool that has a default isolation level of `RepeatableRead`
+    @unused
+    val pool: PostgresConnectionPool[IsolationLevel.RepeatableRead] = PostgresConnectionPool(
+      PG_CONNECTION_STRING,
+      maxConnections = 2,
+      defaultIsolationLevel = IsolationLevel.RepeatableRead,
+    )
+
+    // TODO: this should work/compile, but it currently does not. it looks like the compiler
+    // can't figure out that the type we put together in `pool.useConnection()` contains an isolation
+    // level of `RepeatableRead` from the default isolation level of the pool. See `PostgresConnectionPool.useConnection()`.
+    """
+    pool.useConnection() { pgClient =>
+      repeatableRead(pgClient)
+    }
+    """ should compile
   }
 }
