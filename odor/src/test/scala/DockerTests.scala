@@ -23,6 +23,14 @@ class DockerTests extends AsyncFlatSpec {
   lazy val pool: PostgresConnectionPool[?] =
     PostgresConnectionPool(PG_CONNECTION_STRING, maxConnections = 10)
 
+  // helper function that only compiles if the given `PostgresClient` has at least isolation level
+  // `RepeatableRead`.
+  // `unused` because it's used in compile-tests
+  @unused
+  def repeatableRead(
+    @unused p: PostgresClient { type TransactionIsolationLevel <: IsolationLevel.RepeatableRead },
+  ): Future[Unit] = Future.unit
+
   def assertCurrentIsolationLevel(level: IsolationLevel.ReadCommitted, pgClient: PostgresClient): Future[Unit] =
     async {
       val currentLevel: String =
@@ -33,7 +41,7 @@ class DockerTests extends AsyncFlatSpec {
     }
 
   "PostgresConnectionPool" should "successfully execute a trivial SELECT" in {
-    pool.useConnection() { pgClient =>
+    pool.useConnection { pgClient =>
       pgClient.tx {
         async {
           val res: Int = await(pgClient.querySingleRow(sql"SELECT 1337".query(int4)))
@@ -69,7 +77,7 @@ class DockerTests extends AsyncFlatSpec {
       defaultIsolationLevel = defaultLevel,
     )
 
-    await(pool.useConnection() { pgClient =>
+    await(pool.useConnection { pgClient =>
       assertCurrentIsolationLevel(defaultLevel, pgClient)
     })
 
@@ -87,7 +95,7 @@ class DockerTests extends AsyncFlatSpec {
     ): Future[Unit] = Future.unit
 
     """
-    pool.useConnection() { pgClient =>
+    pool.useConnection { pgClient =>
       serializable(pgClient)
     }
     """ shouldNot typeCheck
@@ -102,13 +110,6 @@ class DockerTests extends AsyncFlatSpec {
   "PostgresConnectionPool" should "propagate the default isolation level at compile time" in async {
     import org.scalatest.matchers.should.Matchers._
 
-    // helper function that should only compile if the given `PostgresClient` has at least isolation level
-    // `RepeatableRead`.
-    @unused
-    def repeatableRead(
-      @unused p: PostgresClient { type TransactionIsolationLevel <: IsolationLevel.RepeatableRead },
-    ): Future[Unit] = Future.unit
-
     // connection pool that has a default isolation level of `RepeatableRead`
     @unused
     val pool: PostgresConnectionPool[IsolationLevel.RepeatableRead] = PostgresConnectionPool(
@@ -117,11 +118,8 @@ class DockerTests extends AsyncFlatSpec {
       defaultIsolationLevel = IsolationLevel.RepeatableRead,
     )
 
-    // TODO: this should work/compile, but it currently does not. it looks like the compiler
-    // can't figure out that the type we put together in `pool.useConnection()` contains an isolation
-    // level of `RepeatableRead` from the default isolation level of the pool. See `PostgresConnectionPool.useConnection()`.
     """
-    pool.useConnection() { pgClient =>
+    pool.useConnection { pgClient =>
       repeatableRead(pgClient)
     }
     """ should compile

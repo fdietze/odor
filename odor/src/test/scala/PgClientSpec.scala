@@ -238,19 +238,19 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
     import org.scalatest.matchers.should.Matchers._
 
     """
-    p.useConnection() { pgClient =>
+    p.useConnection { pgClient =>
       repeatableRead(pgClient)
     }
     """ shouldNot typeCheck
 
     """
-    p.useConnection() { pgClient =>
+    p.useConnection { pgClient =>
       serializable(pgClient)
     }
     """ shouldNot typeCheck
 
     """
-    p.useConnection() { pgClient =>
+    p.useConnection { pgClient =>
       readCommitted(pgClient)
     }
     """ should compile
