@@ -22,7 +22,7 @@ import scala.scalajs.js
 class PostgresConnectionPool[I <: IsolationLevel](
   poolConfig: PgPoolConfig[PgClient],
   val logQueryTimes: Boolean = false,
-  defaultIsolationLevel: I = IsolationLevel.Default,
+  defaultIsolationLevel: I = IsolationLevel.ServerDefault,
 )(implicit
   ec: ExecutionContext,
 ) {
@@ -90,7 +90,7 @@ object PostgresConnectionPool {
     connectionString: String,
     maxConnections: Int,
     logQueryTimes: Boolean = false,
-    defaultIsolationLevel: I = IsolationLevel.Default,
+    defaultIsolationLevel: I = IsolationLevel.ServerDefault,
   )(implicit
     ec: ExecutionContext,
   ): PostgresConnectionPool[I] =

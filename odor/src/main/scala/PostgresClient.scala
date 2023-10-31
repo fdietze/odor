@@ -151,7 +151,7 @@ class PostgresClient(
     transactionSemaphore,
     command[Void](_),
     isolationLevel = transactionIsolationLevel match {
-      case IsolationLevel.Default              => None
+      case IsolationLevel.ServerDefault              => None
       // This match is exhaustive, because all other levels are subtypes of `ReadCommitted`
       case level: IsolationLevel.ReadCommitted => Some(level)
     },
