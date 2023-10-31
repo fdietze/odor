@@ -14,7 +14,7 @@ import scala.annotation.unused
 @nowarn("msg=unused value of type org.scalatest.Assertion")
 @nowarn("msg=unused value of type org.scalatest.Succeeded.type")
 @nowarn("msg=discarded non-Unit value of type org.scalatest.Assertion")
-class DockerTests extends AsyncFlatSpec {
+class IntegrationTests extends AsyncFlatSpec {
   implicit val ec                        = org.scalajs.macrotaskexecutor.MacrotaskExecutor
   implicit override def executionContext = scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
