@@ -13,6 +13,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js.timers._
 import scala.util.Success
+import scala.annotation.unused
 
 @nowarn("msg=dead code") // because throw in async marco
 @nowarn("msg=unused value")
@@ -26,6 +27,7 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
   val tx = new PostgresClient.Transaction(
     transactionSemaphore = semaphore,
     command = c => Future.successful(buffer += c.sql),
+    isolationLevel = None,
   )
 
   def delay(delayMs: Long): Future[Unit] = {
@@ -164,6 +166,7 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
       val tx = new PostgresClient.Transaction(
         transactionSemaphore = semaphore,
         command = c => if (c.sql == failedSql(i)) Future.failed(connFail) else Future.successful(buffer += c.sql),
+        isolationLevel = None,
       )
 
       assert(await(tx {
@@ -193,6 +196,7 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
     val tx = new PostgresClient.Transaction(
       transactionSemaphore = semaphore,
       command = c => if (c.sql == "ROLLBACK") Future.failed(connFail) else Future.successful(buffer += c.sql),
+      isolationLevel = None,
     )
 
     assert(await(tx {
@@ -208,4 +212,47 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
 
   }
 
+  "PostgresClientPool" should "support only compatible isolation levels" in async {
+    val p = PostgresConnectionPool("", 1)
+
+    def readCommitted(
+      @unused p: PostgresClient,
+    ): Future[Unit] = Future.unit
+
+    def repeatableRead(
+      @unused p: PostgresClient { type TransactionIsolationLevel <: IsolationLevel.RepeatableRead },
+    ): Future[Unit] = Future.unit
+
+    def serializable(
+      @unused p: PostgresClient { type TransactionIsolationLevel <: IsolationLevel.Serializable },
+    ): Future[Unit] = Future.unit
+
+    p.useConnection(isolationLevel = IsolationLevel.Serializable) { pgClient =>
+      readCommitted(pgClient)
+      repeatableRead(pgClient)
+      serializable(pgClient)
+
+      Future.unit
+    }
+
+    import org.scalatest.matchers.should.Matchers._
+
+    """
+    p.useConnection { pgClient =>
+      repeatableRead(pgClient)
+    }
+    """ shouldNot typeCheck
+
+    """
+    p.useConnection { pgClient =>
+      serializable(pgClient)
+    }
+    """ shouldNot typeCheck
+
+    """
+    p.useConnection { pgClient =>
+      readCommitted(pgClient)
+    }
+    """ should compile
+  }
 }

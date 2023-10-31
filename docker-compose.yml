@@ -1,0 +1,15 @@
+# based on https://hub.docker.com/_/postgres
+
+# Use postgres/test3 user/password credentials
+version: '3.1'
+
+services:
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test3
+    ports:
+      - "5532:5432"

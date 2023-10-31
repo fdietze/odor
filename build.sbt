@@ -89,4 +89,9 @@ lazy val odor = project
     ),
     useYarn        := true, // Makes scalajs-bundler use yarn instead of npm
     yarnExtraArgs ++= Seq("--prefer-offline", "--pure-lockfile"),
+    Test / testOptions += Tests.Argument(
+      TestFrameworks.ScalaTest,
+      // show a few lines of stack traces, see https://www.scalatest.org/user_guide/using_scalatest_with_sbt
+      "-oS",
+    ),
   )
