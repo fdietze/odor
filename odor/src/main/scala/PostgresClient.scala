@@ -33,7 +33,7 @@ class PostgresConnectionPool(poolConfig: PgPoolConfig[PgClient], val logQueryTim
   def useConnection[R](code: PostgresClient => Future[R]): Future[R] = async {
     val pgClient = new PostgresClient(this)
 
-    val codeResult = await(code(pgClient).attempt)
+    val codeResult = Either.catchNonFatal(await(code(pgClient)))
 
     await(pgClient.release())
 
