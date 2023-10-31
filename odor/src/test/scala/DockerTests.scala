@@ -18,6 +18,7 @@ class DockerTests extends AsyncFlatSpec {
   implicit val ec                        = org.scalajs.macrotaskexecutor.MacrotaskExecutor
   implicit override def executionContext = scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
+  // must be the same as in `docker-compose.yml`
   final val PG_CONNECTION_STRING: String = "postgresql://postgres:test3@localhost:5532"
 
   lazy val pool: PostgresConnectionPool[?] =
@@ -37,7 +38,7 @@ class DockerTests extends AsyncFlatSpec {
         await(pgClient.tx {
           pgClient.querySingleRow(sql"SHOW TRANSACTION ISOLATION LEVEL".query(text))
         })
-      assert(currentLevel == level.postgresName.get)
+      assert(currentLevel == level.postgresName.value)
     }
 
   "PostgresConnectionPool" should "successfully execute a trivial SELECT" in {

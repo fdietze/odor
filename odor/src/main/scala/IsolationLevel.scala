@@ -11,11 +11,13 @@ sealed trait IsolationLevel {
 object IsolationLevel {
   sealed trait Default extends IsolationLevel
 
-  case object Default extends IsolationLevel {
+  case object Default extends Default {
     override val postgresName     = None
     override val postgresNameFrag = None
   }
-
+    // Every isolation level provides a trait and an object extending that trait.
+    // The trait is used when specifying the level as a type.
+    // The object is used when specifying the level as a value.
   sealed trait ReadCommitted extends IsolationLevel {
     override def postgresName: Some[String]
     override def postgresNameFrag: Some[Fragment[Void]]

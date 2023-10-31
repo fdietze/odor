@@ -212,7 +212,7 @@ class PgClientSpecUnitTests extends AsyncFlatSpec with BeforeAndAfterEach {
 
   }
 
-  "PostgresClientPool" should "support different isolation levels" in async {
+  "PostgresClientPool" should "support only compatible isolation levels" in async {
     val p = PostgresConnectionPool("", 1)
 
     def readCommitted(

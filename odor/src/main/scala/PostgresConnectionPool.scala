@@ -40,8 +40,8 @@ class PostgresConnectionPool[I <: IsolationLevel](
   ): Future[R] = useConnection(defaultIsolationLevel)(code)
 
   @nowarn("msg=unused value")
-  def useConnection[Iso <: IsolationLevel, R](
-    isolationLevel: Iso,
+  def useConnection[I <: IsolationLevel, R](
+    isolationLevel: I,
   )(
     code: PostgresClient {
       type TransactionIsolationLevel <: isolationLevel.type;
