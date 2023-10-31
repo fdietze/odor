@@ -29,7 +29,6 @@ class PostgresClient(
 )(implicit
   ec: ExecutionContext,
 ) {
-
   private var pgClientIsInitialized = false
   private var pgClientIsReleased    = false
 

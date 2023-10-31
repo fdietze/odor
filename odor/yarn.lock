@@ -7,17 +7,17 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.13.0.tgz#0400d1e6ce87e9d3032c19eb6c58205b0d3f7850"
   integrity sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg==
 
-"@types/pg-pool@^2.0.3":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@types/pg-pool/-/pg-pool-2.0.4.tgz#b5c60f678094ff3acf3442628a7f708928fcf263"
-  integrity sha512-qZAvkv1K3QbmHHFYSNRYPkRjOWRLBYrL4B9c+wG0GSVGBw0NtJwPcgx/DSddeDJvRGMHCEQ4VMEVfuJ/0gZ3XQ==
+"@types/pg-pool@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/@types/pg-pool/-/pg-pool-2.0.5.tgz#6a2f9373bfaa4958f0f27ee2efc9da93d34f713e"
+  integrity sha512-3qJ6Maljv70V2vnzsYlqWdCcYXkBlSflx577E3BzRnAu4KG32seOm7UXyFmTajquVmtc8FNod2K4RodM0WOl+A==
   dependencies:
     "@types/pg" "*"
 
-"@types/pg@*", "@types/pg@8.10.5":
-  version "8.10.5"
-  resolved "https://registry.yarnpkg.com/@types/pg/-/pg-8.10.5.tgz#a578f856373f71e2b601d599b306f382e6378a26"
-  integrity sha512-GS3ebGcSJQqKSnq4/WnSH1XQvx0vTDLEmqLENk7onKvTnry9BWPsZiZeUMJlEPw+5bCQDzfxZFhxlUztpNCKgQ==
+"@types/pg@*", "@types/pg@8.10.7":
+  version "8.10.7"
+  resolved "https://registry.yarnpkg.com/@types/pg/-/pg-8.10.7.tgz#2f172598272e581e72cba640026e5152b5a3d5c3"
+  integrity sha512-ksJqHipwYaSEHz9e1fr6H6erjoEdNNaOxwyJgPx9bNeaqOW3iWBQgVHfpwiSAoqGzchfc+ZyRLwEfeCcyYD3uQ==
   dependencies:
     "@types/node" "*"
     pg-protocol "*"

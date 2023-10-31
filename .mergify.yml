@@ -26,7 +26,6 @@ pull_request_rules:
   - name: Merge PRs (rebase) which are ready to merge
     conditions:
       - label=ready-to-merge-rebase
-      - base=main
       - check-success~=build \(2.13.\d+\)
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
@@ -39,7 +38,6 @@ pull_request_rules:
   - name: Merge PRs (squash) which are ready to merge
     conditions:
       - label=ready-to-merge-squash
-      - base=main
       - check-success~=build \(2.13.\d+\)
       - "#review-requested=0"
       - "#changes-requested-reviews-by=0"
