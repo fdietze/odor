@@ -35,7 +35,7 @@ jobs:
           cache-dependency-path: odor/package.json
 
       - name: Cache Scalablytyped transpilations
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.ivy2/local/org.scalablytyped
@@ -96,7 +96,7 @@ jobs:
           cache-dependency-path: odor/package.json
 
       - name: Cache Scalablytyped transpilations
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.ivy2/local/org.scalablytyped
