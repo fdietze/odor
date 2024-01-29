@@ -7,10 +7,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.13.0.tgz#0400d1e6ce87e9d3032c19eb6c58205b0d3f7850"
   integrity sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg==
 
-"@types/pg-pool@^2.0.5":
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/@types/pg-pool/-/pg-pool-2.0.5.tgz#6a2f9373bfaa4958f0f27ee2efc9da93d34f713e"
-  integrity sha512-3qJ6Maljv70V2vnzsYlqWdCcYXkBlSflx577E3BzRnAu4KG32seOm7UXyFmTajquVmtc8FNod2K4RodM0WOl+A==
+"@types/pg-pool@^2.0.6":
+  version "2.0.6"
+  resolved "https://registry.yarnpkg.com/@types/pg-pool/-/pg-pool-2.0.6.tgz#1376d9dc5aec4bb2ec67ce28d7e9858227403c77"
+  integrity sha512-TaAUE5rq2VQYxab5Ts7WZhKNmuN78Q6PiFonTDdpbx8a1H0M1vhy3rhiMjl+e2iHmogyMw7jZF4FrE6eJUy5HQ==
   dependencies:
     "@types/pg" "*"
 
