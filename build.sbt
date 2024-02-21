@@ -20,7 +20,7 @@ inThisBuild(
 )
 
 val versions = new {
-  val scalaTest = "3.2.17"
+  val scalaTest = "3.2.18"
 }
 
 lazy val scalaJsMacrotaskExecutor = Seq(
