@@ -1,8 +1,35 @@
 queue_rules:
+  - name: duplicated default from Merge PRs (rebase) which are ready to merge
+    queue_conditions:
+      - base=main
+      - label=dependencies
+      - check-success~=build \(2.13.\d+\)
+      - label=ready-to-merge-rebase
+      - check-success~=build \(2.13.\d+\)
+      - "#review-requested=0"
+      - "#changes-requested-reviews-by=0"
+    merge_conditions: []
+    merge_method: rebase
+  - name: duplicated default from Merge PRs (squash) which are ready to merge
+    queue_conditions:
+      - base=main
+      - label=dependencies
+      - check-success~=build \(2.13.\d+\)
+      - label=ready-to-merge-squash
+      - check-success~=build \(2.13.\d+\)
+      - "#review-requested=0"
+      - "#changes-requested-reviews-by=0"
+    merge_conditions: []
+    merge_method: squash
   - name: default
-    conditions:
+    queue_conditions:
+      - base=main
+      - label=dependencies
+      - check-success~=build \(2.13.\d+\)
+    merge_conditions:
       # Conditions to get out of the queue (= merged)
       - check-success~=build \(2.13.\d+\)
+    merge_method: squash
 
 pull_request_rules:
   - name: Label Scala Steward PRs
@@ -11,37 +38,8 @@ pull_request_rules:
     actions:
       label:
         add: [dependencies, scala]
-
-  - name: Merge dependency-update PRs
-    conditions:
-      - base=main
-      - label=dependencies
-      - check-success~=build \(2.13.\d+\)
+  - name: Merge PRs (rebase) which are ready to merge + Merge PRs (squash) which are
+      ready to merge + Merge dependency-update PRs
+    conditions: []
     actions:
       queue:
-        name: default
-        method: squash
-
-
-  - name: Merge PRs (rebase) which are ready to merge
-    conditions:
-      - label=ready-to-merge-rebase
-      - check-success~=build \(2.13.\d+\)
-      - "#review-requested=0"
-      - "#changes-requested-reviews-by=0"
-    actions:
-      queue:
-        name: default
-        method: rebase
-
-
-  - name: Merge PRs (squash) which are ready to merge
-    conditions:
-      - label=ready-to-merge-squash
-      - check-success~=build \(2.13.\d+\)
-      - "#review-requested=0"
-      - "#changes-requested-reviews-by=0"
-    actions:
-      queue:
-        name: default
-        method: squash
