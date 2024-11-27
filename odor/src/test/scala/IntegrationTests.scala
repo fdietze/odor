@@ -56,13 +56,14 @@ class IntegrationTests extends AsyncFlatSpec {
     await(
       Future.sequence(
         for (
-          isolationLevel <-
-            Vector(IsolationLevel.ReadCommitted, IsolationLevel.RepeatableRead, IsolationLevel.Serializable)
-        ) yield {
-          pool.useConnection(isolationLevel = isolationLevel) { pgClient =>
-            assertCurrentIsolationLevel(isolationLevel, pgClient)
-          }
-        },
+            isolationLevel <-
+              Vector(IsolationLevel.ReadCommitted, IsolationLevel.RepeatableRead, IsolationLevel.Serializable)
+          )
+          yield {
+            pool.useConnection(isolationLevel = isolationLevel) { pgClient =>
+              assertCurrentIsolationLevel(isolationLevel, pgClient)
+            }
+          },
       ),
     ): Unit
 
